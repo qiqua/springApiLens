@@ -20,9 +20,10 @@ public class CallEdgeExtractor {
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b(?:private|protected|public)?\\s*(?:final\\s+)?(\\w+)\\s+(\\w+)\\s*;");
     private static final Pattern CONSTRUCTOR_PARAMETER_PATTERN = Pattern.compile("(\\w+)\\s+(\\w+)");
     private static final Pattern METHOD_PATTERN = Pattern.compile(
-        "^\\s*(?:public|protected|private)?\\s*(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.\\s]+?)\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*(?:\\{|;).*"
+        "(?s)^\\s*(?:public|protected|private)?\\s*(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.\\[\\]\\s]+?)\\s+(\\w+)\\s*\\((.*)\\)\\s*(?:throws\\s+[\\w.,\\s]+)?\\s*(?:\\{|;).*"
     );
     private static final Pattern CALL_PATTERN = Pattern.compile("\\b(\\w+)\\.(\\w+)\\s*\\(");
+    private static final Pattern PARAMETER_ANNOTATION_PATTERN = Pattern.compile("@[\\w.]+(?:\\([^()]*\\))?\\s*");
 
     public List<CallEdge> extract(Path repoRoot, List<Path> javaFiles, List<CodeSymbol> symbols) {
         Map<String, CodeSymbol> byClassAndMethod = new HashMap<>();
@@ -46,18 +47,13 @@ public class CallEdgeExtractor {
             String className = findTypeName(lines).orElse("");
             Map<String, String> variableTypes = variableTypes(lines, className);
             List<CallEdge> edges = new ArrayList<>();
-            for (int i = 0; i < lines.size(); i++) {
-                Matcher methodMatcher = METHOD_PATTERN.matcher(lines.get(i));
-                if (!methodMatcher.matches()) {
+            for (MethodDeclaration declaration : methodDeclarations(lines)) {
+                if (declaration.methodName().equals(className)) {
                     continue;
                 }
-                String methodName = methodMatcher.group(2);
-                if (methodName.equals(className)) {
-                    continue;
-                }
-                String fromSignature = className + "." + methodName + "()";
-                int endLine = findMethodEndLine(lines, i);
-                for (int lineIndex = i; lineIndex < endLine && lineIndex < lines.size(); lineIndex++) {
+                String fromSignature = className + "." + declaration.methodName() + "()";
+                int endLine = findMethodEndLine(lines, declaration.startIndex());
+                for (int lineIndex = declaration.startIndex(); lineIndex < endLine && lineIndex < lines.size(); lineIndex++) {
                     Matcher callMatcher = CALL_PATTERN.matcher(lines.get(lineIndex));
                     while (callMatcher.find()) {
                         String variable = callMatcher.group(1);
@@ -89,6 +85,39 @@ public class CallEdgeExtractor {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse Java file " + javaFile, e);
         }
+    }
+
+    private List<MethodDeclaration> methodDeclarations(List<String> lines) {
+        List<MethodDeclaration> declarations = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (line.isBlank() || line.startsWith("@") || line.startsWith("//")) {
+                continue;
+            }
+
+            StringBuilder signature = new StringBuilder();
+            for (int j = i; j < lines.size(); j++) {
+                signature.append(' ').append(lines.get(j).trim());
+                if (containsSignatureTerminator(lines.get(j))) {
+                    break;
+                }
+            }
+
+            String normalizedSignature = PARAMETER_ANNOTATION_PATTERN
+                .matcher(signature.toString())
+                .replaceAll("")
+                .replaceAll("\\s+", " ")
+                .trim();
+            Matcher methodMatcher = METHOD_PATTERN.matcher(normalizedSignature);
+            if (methodMatcher.matches()) {
+                declarations.add(new MethodDeclaration(methodMatcher.group(2), i));
+            }
+        }
+        return declarations;
+    }
+
+    private boolean containsSignatureTerminator(String line) {
+        return line.contains("{") || line.contains(";");
     }
 
     private boolean shouldKeepUnresolvedCall(String targetClass) {
@@ -154,5 +183,8 @@ public class CallEdgeExtractor {
             }
         }
         return startIndex + 1;
+    }
+
+    private record MethodDeclaration(String methodName, int startIndex) {
     }
 }

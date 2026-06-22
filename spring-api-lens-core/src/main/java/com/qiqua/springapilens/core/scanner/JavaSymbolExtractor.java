@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class JavaSymbolExtractor {
     private static final Pattern TYPE_PATTERN = Pattern.compile("\\b(?:class|interface)\\s+(\\w+)");
     private static final Pattern METHOD_PATTERN = Pattern.compile(
-        "\\b(?:public\\s+|protected\\s+|private\\s+)?(?:static\\s+)?(?:final\\s+)?(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.]+)\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*(?:\\{|;)"
+        "\\b(?:public\\s+|protected\\s+|private\\s+)?(?:static\\s+)?(?:final\\s+)?(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.\\[\\]]+)\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*(?:throws\\s+[\\w.,\\s]+)?\\s*(?:\\{|;)"
     );
 
     public List<CodeSymbol> extract(Path repoRoot, List<Path> javaFiles) {

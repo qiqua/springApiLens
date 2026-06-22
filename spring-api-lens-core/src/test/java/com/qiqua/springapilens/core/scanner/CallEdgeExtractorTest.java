@@ -93,6 +93,80 @@ class CallEdgeExtractorTest {
             );
     }
 
+    @Test
+    void extractsCallsFromMethodsWithAnnotatedAndMultilineParameters() throws IOException {
+        Path controller = write("src/main/java/com/example/DataExportController.java", """
+            package com.example;
+            import org.springframework.beans.factory.annotation.Autowired;
+            import org.springframework.web.bind.annotation.PathVariable;
+            import org.springframework.web.bind.annotation.RequestBody;
+            import org.springframework.web.bind.annotation.RequestParam;
+            import java.util.List;
+
+            class DataExportController {
+                @Autowired
+                private TipDataService tipDataService;
+                @Autowired
+                private InfoDataExcelService infoDataExcelService;
+                @Autowired
+                private ExportService exportService;
+
+                public void exportSelected(@RequestParam("type") String type, @RequestBody List<Long> ids) {
+                    tipDataService.exportSelected(ids);
+                }
+
+                public void quarantineRegistrationListExportSelected(@RequestBody List<Long> ids, HttpServletResponse response) {
+                    exportService.exportSelected(response, ids);
+                }
+
+                public void exportInfoDataExcel(@PathVariable("typeId") Integer typeId,
+                                                HttpServletResponse response) {
+                    byte[] excelData = infoDataExcelService.exportExcel(Long.valueOf(typeId));
+                }
+            }
+            """);
+        Path tipDataService = write("src/main/java/com/example/TipDataService.java", """
+            package com.example;
+            class TipDataService {
+                void exportSelected(java.util.List<Long> ids) {}
+            }
+            """);
+        Path infoDataExcelService = write("src/main/java/com/example/InfoDataExcelService.java", """
+            package com.example;
+            class InfoDataExcelService {
+                byte[] exportExcel(Long typeId) { return new byte[0]; }
+            }
+            """);
+        Path exportService = write("src/main/java/com/example/ExportService.java", """
+            package com.example;
+            import java.io.IOException;
+            class ExportService {
+                private TipQuarantineRegistrationListRepository repository;
+                public void exportSelected(HttpServletResponse response, java.util.List<Long> ids) throws IOException {
+                    repository.findAllById(ids);
+                }
+            }
+            """);
+        Path repository = write("src/main/java/com/example/TipQuarantineRegistrationListRepository.java", """
+            package com.example;
+            interface TipQuarantineRegistrationListRepository {
+            }
+            """);
+
+        List<Path> files = List.of(controller, tipDataService, infoDataExcelService, exportService, repository);
+        List<CodeSymbol> symbols = new JavaSymbolExtractor().extract(repoRoot, files);
+        List<CallEdge> edges = new CallEdgeExtractor().extract(repoRoot, files, symbols);
+
+        assertThat(edges)
+            .extracting(edge -> edge.fromSignature() + " -> " + edge.toSignature())
+            .contains(
+                "DataExportController.exportSelected() -> TipDataService.exportSelected()",
+                "DataExportController.quarantineRegistrationListExportSelected() -> ExportService.exportSelected()",
+                "ExportService.exportSelected() -> TipQuarantineRegistrationListRepository.findAllById()",
+                "DataExportController.exportInfoDataExcel() -> InfoDataExcelService.exportExcel()"
+            );
+    }
+
     private Path write(String relativePath, String content) throws IOException {
         Path path = repoRoot.resolve(relativePath);
         Files.createDirectories(path.getParent());
