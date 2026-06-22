@@ -53,6 +53,46 @@ class CallEdgeExtractorTest {
             );
     }
 
+    @Test
+    void keepsRepositoryAndMapperCallsWhenMethodIsInheritedFromFrameworkBaseType() throws IOException {
+        Path service = write("src/main/java/com/example/TipDataService.java", """
+            package com.example;
+            class TipDataService {
+                private final TipDataMapper tipDataMapper;
+                private final AuditLogRepository auditLogRepository;
+                TipDataService(TipDataMapper tipDataMapper, AuditLogRepository auditLogRepository) {
+                    this.tipDataMapper = tipDataMapper;
+                    this.auditLogRepository = auditLogRepository;
+                }
+                void load() {
+                    tipDataMapper.selectList(null);
+                    auditLogRepository.findById(1L);
+                }
+            }
+            """);
+        Path mapper = write("src/main/java/com/example/TipDataMapper.java", """
+            package com.example;
+            interface TipDataMapper {
+            }
+            """);
+        Path repository = write("src/main/java/com/example/AuditLogRepository.java", """
+            package com.example;
+            interface AuditLogRepository {
+            }
+            """);
+
+        List<Path> files = List.of(service, mapper, repository);
+        List<CodeSymbol> symbols = new JavaSymbolExtractor().extract(repoRoot, files);
+        List<CallEdge> edges = new CallEdgeExtractor().extract(repoRoot, files, symbols);
+
+        assertThat(edges)
+            .extracting(edge -> edge.fromSignature() + " -> " + edge.toSignature())
+            .contains(
+                "TipDataService.load() -> TipDataMapper.selectList()",
+                "TipDataService.load() -> AuditLogRepository.findById()"
+            );
+    }
+
     private Path write(String relativePath, String content) throws IOException {
         Path path = repoRoot.resolve(relativePath);
         Files.createDirectories(path.getParent());

@@ -254,7 +254,8 @@ function filteredEndpoints() {
 
 function renderEndpointList() {
   const endpoints = filteredEndpoints();
-  elements.visibleCount.textContent = `已显示 ${endpoints.length} 个`;
+  const total = workbench?.summary?.endpointCount ?? (workbench?.endpoints || []).length;
+  elements.visibleCount.textContent = `已显示 ${endpoints.length} / 共 ${total} 个`;
   elements.endpointList.innerHTML = '';
 
   if (endpoints.length === 0) {

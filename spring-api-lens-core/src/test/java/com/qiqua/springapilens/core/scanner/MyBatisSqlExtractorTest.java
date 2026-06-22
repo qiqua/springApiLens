@@ -46,4 +46,87 @@ class MyBatisSqlExtractorTest {
         assertThat(fragments.get(2).operationType()).isEqualTo("delete");
         assertThat(fragments.get(2).tables()).containsExactly("order_archive");
     }
+
+    @Test
+    void extractsJavaAnnotationSqlMyBatisPlusTablesAndJpaRepositoryTables() throws IOException {
+        Path mapper = write("src/main/java/com/example/TipDataMapper.java", """
+            package com.example;
+            import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+            import org.apache.ibatis.annotations.Insert;
+            import org.apache.ibatis.annotations.Mapper;
+            import org.apache.ibatis.annotations.Select;
+
+            @Mapper
+            public interface TipDataMapper extends BaseMapper<TipDataDO> {
+                @Select("select * from tip_data where id = #{id}")
+                TipDataDO selectForExport(String id);
+
+                @Insert({"insert into tip_data_archive (id)", "values (#{id})"})
+                int archive(String id);
+            }
+            """);
+        Path myBatisPlusEntity = write("src/main/java/com/example/TipDataDO.java", """
+            package com.example;
+            import com.baomidou.mybatisplus.annotation.TableName;
+
+            @TableName(
+                value = "tip_data",
+                autoResultMap = true
+            )
+            public class TipDataDO {
+            }
+            """);
+        Path repository = write("src/main/java/com/example/AuditLogRepository.java", """
+            package com.example;
+            import org.springframework.data.jpa.repository.JpaRepository;
+
+            public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long> {
+            }
+            """);
+        Path jpaEntity = write("src/main/java/com/example/AuditLogEntity.java", """
+            package com.example;
+            import jakarta.persistence.Entity;
+            import jakarta.persistence.Table;
+
+            @Entity
+            @Table(name = "audit_log")
+            public class AuditLogEntity {
+            }
+            """);
+
+        List<SqlFragment> fragments = new MyBatisSqlExtractor()
+            .extract(repoRoot, List.of(mapper, myBatisPlusEntity, repository, jpaEntity));
+
+        assertThat(fragments).anySatisfy(fragment -> {
+            assertThat(fragment.mapperNamespace()).isEqualTo("com.example.TipDataMapper");
+            assertThat(fragment.mapperMethod()).isEqualTo("selectForExport");
+            assertThat(fragment.operationType()).isEqualTo("select");
+            assertThat(fragment.tables()).containsExactly("tip_data");
+        });
+        assertThat(fragments).anySatisfy(fragment -> {
+            assertThat(fragment.mapperNamespace()).isEqualTo("com.example.TipDataMapper");
+            assertThat(fragment.mapperMethod()).isEqualTo("archive");
+            assertThat(fragment.operationType()).isEqualTo("insert");
+            assertThat(fragment.tables()).containsExactly("tip_data_archive");
+        });
+        assertThat(fragments).anySatisfy(fragment -> {
+            assertThat(fragment.mapperNamespace()).isEqualTo("com.example.TipDataMapper");
+            assertThat(fragment.mapperMethod()).isEqualTo("BaseMapper<TipDataDO>");
+            assertThat(fragment.operationType()).isEqualTo("mybatis-plus");
+            assertThat(fragment.tables()).containsExactly("tip_data");
+        });
+        assertThat(fragments).anySatisfy(fragment -> {
+            assertThat(fragment.mapperNamespace()).isEqualTo("com.example.AuditLogRepository");
+            assertThat(fragment.mapperMethod()).isEqualTo("JpaRepository<AuditLogEntity>");
+            assertThat(fragment.operationType()).isEqualTo("jpa");
+            assertThat(fragment.tables()).containsExactly("audit_log");
+        });
+    }
+
+    private Path write(String relativePath, String content) throws IOException {
+        Path path = repoRoot.resolve(relativePath);
+        Files.createDirectories(path.getParent());
+        Files.writeString(path, content);
+        return path;
+    }
 }

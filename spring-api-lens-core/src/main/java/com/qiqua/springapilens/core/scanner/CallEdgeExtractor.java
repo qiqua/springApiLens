@@ -74,6 +74,13 @@ public class CallEdgeExtractor {
                                 0.95,
                                 variable + "." + targetMethod
                             ));
+                        } else if (shouldKeepUnresolvedCall(targetClass)) {
+                            edges.add(new CallEdge(
+                                fromSignature,
+                                targetClass + "." + targetMethod + "()",
+                                0.65,
+                                variable + "." + targetMethod
+                            ));
                         }
                     }
                 }
@@ -82,6 +89,13 @@ public class CallEdgeExtractor {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse Java file " + javaFile, e);
         }
+    }
+
+    private boolean shouldKeepUnresolvedCall(String targetClass) {
+        return targetClass.endsWith("Mapper")
+            || targetClass.endsWith("Repository")
+            || targetClass.endsWith("Repo")
+            || targetClass.endsWith("Dao");
     }
 
     private Map<String, String> variableTypes(List<String> lines, String className) {
