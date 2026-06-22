@@ -38,4 +38,23 @@ class RepositoryValidatorTest {
         assertThat(info.currentBranch()).isEqualTo("main");
         assertThat(info.headCommit()).isEqualTo("abc123");
     }
+
+    @Test
+    void acceptsLinkedWorktreeGitFile() throws IOException {
+        Path commonGit = tempDir.resolve("common.git");
+        Path worktree = tempDir.resolve("worktree");
+        Files.createDirectories(commonGit.resolve("worktrees/worktree"));
+        Files.createDirectories(commonGit.resolve("refs/heads"));
+        Files.writeString(commonGit.resolve("worktrees/worktree/HEAD"), "ref: refs/heads/feature\n");
+        Files.writeString(commonGit.resolve("refs/heads/feature"), "def456\n");
+        Files.createDirectories(worktree);
+        Files.writeString(worktree.resolve(".git"), "gitdir: " + commonGit.resolve("worktrees/worktree") + "\n");
+
+        RepositoryInfo info = new RepositoryValidator().validate(worktree);
+
+        assertThat(info.rootPath()).isEqualTo(worktree.toAbsolutePath().normalize());
+        assertThat(info.repoName()).isEqualTo("worktree");
+        assertThat(info.currentBranch()).isEqualTo("feature");
+        assertThat(info.headCommit()).isEqualTo("def456");
+    }
 }

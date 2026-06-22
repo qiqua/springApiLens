@@ -30,8 +30,8 @@ public class SourceFileDiscoverer {
             || relative.startsWith("node_modules/")) {
             return false;
         }
-        return relative.startsWith("src/main/java/") && relative.endsWith(".java")
-            || relative.startsWith("src/main/resources/") && (
+        return relative.contains("src/main/java/") && relative.endsWith(".java")
+            || relative.contains("src/main/resources/") && (
                 relative.endsWith(".xml")
                     || relative.endsWith(".yml")
                     || relative.endsWith(".yaml")

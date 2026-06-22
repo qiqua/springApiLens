@@ -33,6 +33,21 @@ class SourceFileDiscovererTest {
             );
     }
 
+    @Test
+    void discoversFilesInsideMavenModules() throws IOException {
+        write("spring-api-lens-app/src/main/java/com/example/OrderController.java");
+        write("spring-api-lens-app/src/main/resources/mapper/OrderMapper.xml");
+
+        List<Path> files = new SourceFileDiscoverer().discover(repoRoot);
+
+        assertThat(files)
+            .extracting(path -> repoRoot.relativize(path).toString().replace('\\', '/'))
+            .containsExactly(
+                "spring-api-lens-app/src/main/java/com/example/OrderController.java",
+                "spring-api-lens-app/src/main/resources/mapper/OrderMapper.xml"
+            );
+    }
+
     private void write(String relativePath) throws IOException {
         Path path = repoRoot.resolve(relativePath);
         Files.createDirectories(path.getParent());

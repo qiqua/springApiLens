@@ -9,12 +9,12 @@ import java.nio.file.Path;
 public class RepositoryValidator {
     public RepositoryInfo validate(Path rootPath) {
         Path normalized = rootPath.toAbsolutePath().normalize();
-        Path gitDir = normalized.resolve(".git");
-        if (!Files.isDirectory(gitDir)) {
+        GitPaths gitPaths = resolveGitPaths(normalized);
+        if (gitPaths == null) {
             throw new IllegalArgumentException("Repository root must contain .git: " + normalized);
         }
-        String branch = readBranch(gitDir);
-        String headCommit = readHeadCommit(gitDir, branch);
+        String branch = readBranch(gitPaths.worktreeGitDir());
+        String headCommit = readHeadCommit(gitPaths.commonGitDir(), gitPaths.worktreeGitDir(), branch);
         return new RepositoryInfo(
             normalized,
             normalized.getFileName().toString(),
@@ -22,6 +22,48 @@ public class RepositoryValidator {
             headCommit,
             false
         );
+    }
+
+    private GitPaths resolveGitPaths(Path rootPath) {
+        Path dotGit = rootPath.resolve(".git");
+        if (Files.isDirectory(dotGit)) {
+            return new GitPaths(dotGit, dotGit);
+        }
+        if (!Files.isRegularFile(dotGit)) {
+            return null;
+        }
+        try {
+            String content = Files.readString(dotGit).trim();
+            if (!content.startsWith("gitdir:")) {
+                return null;
+            }
+            Path worktreeGitDir = Path.of(content.substring("gitdir:".length()).trim())
+                .toAbsolutePath()
+                .normalize();
+            return new GitPaths(worktreeGitDir, resolveCommonGitDir(worktreeGitDir));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private Path resolveCommonGitDir(Path worktreeGitDir) {
+        Path commonDir = worktreeGitDir.resolve("commondir");
+        if (Files.isRegularFile(commonDir)) {
+            try {
+                Path raw = Path.of(Files.readString(commonDir).trim());
+                if (!raw.isAbsolute()) {
+                    raw = worktreeGitDir.resolve(raw);
+                }
+                return raw.toAbsolutePath().normalize();
+            } catch (IOException e) {
+                return worktreeGitDir;
+            }
+        }
+        Path parent = worktreeGitDir.getParent();
+        if (parent != null && "worktrees".equals(parent.getFileName().toString()) && parent.getParent() != null) {
+            return parent.getParent().toAbsolutePath().normalize();
+        }
+        return worktreeGitDir;
     }
 
     private String readBranch(Path gitDir) {
@@ -37,15 +79,22 @@ public class RepositoryValidator {
         }
     }
 
-    private String readHeadCommit(Path gitDir, String branch) {
+    private String readHeadCommit(Path commonGitDir, Path worktreeGitDir, String branch) {
         if ("UNKNOWN".equals(branch) || "DETACHED".equals(branch)) {
             return "UNKNOWN";
         }
-        Path ref = gitDir.resolve("refs").resolve("heads").resolve(branch);
+        Path ref = commonGitDir.resolve("refs").resolve("heads").resolve(branch);
         try {
             return Files.readString(ref).trim();
         } catch (IOException e) {
-            return "UNKNOWN";
+            try {
+                return Files.readString(worktreeGitDir.resolve("HEAD")).trim();
+            } catch (IOException ignored) {
+                return "UNKNOWN";
+            }
         }
+    }
+
+    private record GitPaths(Path worktreeGitDir, Path commonGitDir) {
     }
 }
