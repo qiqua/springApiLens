@@ -28,6 +28,9 @@ class MyBatisSqlExtractorTest {
               <select id="findOrder">
                 select * from order_main o join user_account u on o.user_id = u.id
               </select>
+              <delete id="deleteOrder">
+                delete from order_archive where id = #{id}
+              </delete>
             </mapper>
             """);
 
@@ -35,10 +38,12 @@ class MyBatisSqlExtractorTest {
 
         assertThat(fragments)
             .extracting(SqlFragment::mapperMethod)
-            .containsExactly("insertOrder", "findOrder");
+            .containsExactly("insertOrder", "findOrder", "deleteOrder");
         assertThat(fragments.get(0).operationType()).isEqualTo("insert");
         assertThat(fragments.get(0).tables()).containsExactly("order_main");
         assertThat(fragments.get(1).operationType()).isEqualTo("select");
         assertThat(fragments.get(1).tables()).containsExactly("order_main", "user_account");
+        assertThat(fragments.get(2).operationType()).isEqualTo("delete");
+        assertThat(fragments.get(2).tables()).containsExactly("order_archive");
     }
 }

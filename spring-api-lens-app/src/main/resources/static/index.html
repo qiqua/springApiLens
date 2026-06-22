@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,52 +8,52 @@
 </head>
 <body>
   <main class="app-shell">
-    <section class="scan-bar" aria-label="Repository scan">
+    <section class="scan-bar" aria-label="代码仓库扫描">
       <div class="brand">
         <strong>springApiLens</strong>
-        <span>Local API workbench</span>
+        <span>本地接口分析工作台</span>
       </div>
       <label class="field repo-field" for="repoPathInput">
-        <span>Repo path</span>
+        <span>本地 Git 路径</span>
         <input id="repoPathInput" type="text" placeholder="D:\workspace\demo-springboot">
       </label>
       <label class="field snapshot-field" for="snapshotPathInput">
-        <span>Snapshot path</span>
-        <input id="snapshotPathInput" type="text" placeholder="Optional TSV path">
+        <span>快照路径</span>
+        <input id="snapshotPathInput" type="text" placeholder="可选 TSV 输出路径">
       </label>
-      <button id="scanButton" class="primary-button" type="button">Scan</button>
-      <p id="scanStatus" class="status-text">No repository scanned.</p>
+      <button id="scanButton" class="primary-button" type="button">开始扫描</button>
+      <p id="scanStatus" class="status-text">尚未扫描代码仓库。</p>
     </section>
 
-    <section class="summary-strip" aria-label="Scan summary">
-      <div><span>Repository</span><strong id="repoName">-</strong></div>
-      <div><span>Endpoints</span><strong id="endpointCount">0</strong></div>
-      <div><span>Call edges</span><strong id="callEdgeCount">0</strong></div>
-      <div><span>SQL fragments</span><strong id="sqlFragmentCount">0</strong></div>
-      <div><span>Tables</span><strong id="tableCount">0</strong></div>
+    <section class="summary-strip" aria-label="扫描概览">
+      <div><span>代码仓库</span><strong id="repoName">-</strong></div>
+      <div><span>接口数量</span><strong id="endpointCount">0</strong></div>
+      <div><span>调用边</span><strong id="callEdgeCount">0</strong></div>
+      <div><span>SQL 片段</span><strong id="sqlFragmentCount">0</strong></div>
+      <div><span>数据表</span><strong id="tableCount">0</strong></div>
     </section>
 
-    <section class="operations-strip" aria-label="Persistent settings">
-      <section class="operation-panel" aria-label="Scan history">
+    <section class="operations-strip" aria-label="历史记录和配置">
+      <section class="operation-panel" aria-label="扫描历史">
         <div class="panel-header compact-header">
-          <h2>History</h2>
-          <button id="refreshHistoryButton" class="secondary-button" type="button">Refresh</button>
+          <h2>扫描历史</h2>
+          <button id="refreshHistoryButton" class="secondary-button" type="button">刷新</button>
         </div>
-        <div id="historyList" class="history-list empty-state">No scan history yet.</div>
+        <div id="historyList" class="history-list empty-state">暂无扫描历史。</div>
       </section>
 
-      <section class="operation-panel" aria-label="AI settings">
+      <section class="operation-panel" aria-label="AI 配置">
         <div class="panel-header compact-header">
-          <h2>AI Settings</h2>
-          <span id="aiConfigStatus">Not configured</span>
+          <h2>AI 配置</h2>
+          <span id="aiConfigStatus">未配置</span>
         </div>
         <div class="ai-config-grid">
           <label class="toggle-field" for="aiEnabledInput">
             <input id="aiEnabledInput" type="checkbox">
-            <span>Enabled</span>
+            <span>启用</span>
           </label>
           <label class="field" for="aiProviderInput">
-            <span>Provider</span>
+            <span>供应商</span>
             <input id="aiProviderInput" type="text" placeholder="deepseek">
           </label>
           <label class="field" for="aiBaseUrlInput">
@@ -61,54 +61,54 @@
             <input id="aiBaseUrlInput" type="text" placeholder="https://api.deepseek.com">
           </label>
           <label class="field" for="aiModelInput">
-            <span>Model</span>
+            <span>模型</span>
             <input id="aiModelInput" type="text" placeholder="deepseek-chat">
           </label>
           <label class="field" for="aiApiKeyEnvInput">
-            <span>API key env</span>
+            <span>密钥环境变量</span>
             <input id="aiApiKeyEnvInput" type="text" placeholder="SPRING_API_LENS_AI_KEY">
           </label>
-          <button id="saveAiConfigButton" class="secondary-button" type="button">Save AI Config</button>
+          <button id="saveAiConfigButton" class="secondary-button" type="button">保存配置</button>
         </div>
       </section>
     </section>
 
     <section class="workspace">
-      <aside class="filters-panel" aria-label="Endpoint filters">
-        <h2>Filters</h2>
+      <aside class="filters-panel" aria-label="接口筛选">
+        <h2>筛选</h2>
         <label class="field" for="searchInput">
-          <span>Search</span>
-          <input id="searchInput" type="search" placeholder="path, class, method, type">
+          <span>搜索</span>
+          <input id="searchInput" type="search" placeholder="路径、类名、方法、类型">
         </label>
         <label class="field" for="methodFilter">
-          <span>HTTP method</span>
+          <span>HTTP 方法</span>
           <select id="methodFilter">
-            <option value="">All</option>
+            <option value="">全部</option>
           </select>
         </label>
         <label class="field" for="tableInput">
-          <span>Table</span>
-          <input id="tableInput" type="search" placeholder="table name">
+          <span>数据表</span>
+          <input id="tableInput" type="search" placeholder="表名关键词">
         </label>
         <label class="field" for="authorInput">
-          <span>Author</span>
-          <input id="authorInput" type="search" placeholder="author keyword">
+          <span>提交人</span>
+          <input id="authorInput" type="search" placeholder="作者关键词">
         </label>
       </aside>
 
-      <section class="endpoint-panel" aria-label="Endpoint list">
+      <section class="endpoint-panel" aria-label="接口列表">
         <div class="panel-header">
-          <h2>Endpoints</h2>
-          <span id="visibleCount">0 shown</span>
+          <h2>接口列表</h2>
+          <span id="visibleCount">已显示 0 个</span>
         </div>
         <div id="endpointList" class="endpoint-list" role="list"></div>
       </section>
 
-      <section class="detail-panel" aria-label="Endpoint detail">
+      <section class="detail-panel" aria-label="接口详情">
         <div class="panel-header">
-          <h2>Endpoint Detail</h2>
+          <h2>接口详情</h2>
         </div>
-        <div id="detailContent" class="detail-content empty-state">Select an endpoint to inspect evidence.</div>
+        <div id="detailContent" class="detail-content empty-state">选择一个接口查看业务画像和证据。</div>
       </section>
     </section>
   </main>

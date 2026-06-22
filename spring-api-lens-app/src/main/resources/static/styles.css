@@ -444,6 +444,56 @@ select {
   overflow-wrap: anywhere;
 }
 
+.profile-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-summary div {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.profile-summary strong {
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.profile-block {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  padding: 9px;
+}
+
+.profile-block h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.profile-block ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-block li {
+  overflow-wrap: anywhere;
+}
+
 .code-block {
   margin: 0;
   padding: 10px;
@@ -561,6 +611,10 @@ select {
   }
 
   .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-grid {
     grid-template-columns: 1fr;
   }
 }

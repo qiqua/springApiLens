@@ -176,7 +176,14 @@ class ScanControllerTest {
             .andExpect(jsonPath("$.sqlFragments[0].operationType").value("insert"))
             .andExpect(jsonPath("$.tables[0]").value("orders"))
             .andExpect(jsonPath("$.authors[0].name").value("Ada"))
-            .andExpect(jsonPath("$.authors[0].lineCount").value(12));
+            .andExpect(jsonPath("$.authors[0].lineCount").value(12))
+            .andExpect(jsonPath("$.profile.purpose").value("处理 POST /api/orders，对应 OrderController#create。"))
+            .andExpect(jsonPath("$.profile.callGuide").value("使用 POST /api/orders 调用，请求体 CreateOrderRequest，响应 ApiResult<OrderVO>。"))
+            .andExpect(jsonPath("$.profile.businessFlow[0]").value("OrderController.create() -> OrderService.create()：service.create(request)"))
+            .andExpect(jsonPath("$.profile.dataTables[0]").value("orders（insert，OrderMapper.insert）"))
+            .andExpect(jsonPath("$.profile.authorSummary[0]").value("Ada 贡献 12 行，约 75%。"))
+            .andExpect(jsonPath("$.profile.risks[0]").value("该接口包含写操作 insert，建议重点关注幂等性、事务边界和参数校验。"))
+            .andExpect(jsonPath("$.profile.testSuggestions[0]").value("验证 POST /api/orders 的正常请求、参数缺失和异常分支。"));
     }
 
     @Test

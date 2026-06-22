@@ -39,6 +39,7 @@ public class ScanController {
     private final AiAnalysisService aiAnalysisService;
     private final ScanHistoryStore scanHistoryStore;
     private final AiConfigService aiConfigService;
+    private final EndpointBusinessProfileBuilder businessProfileBuilder = new EndpointBusinessProfileBuilder();
 
     public ScanController(
         RepositoryScanner repositoryScanner,
@@ -235,6 +236,7 @@ public class ScanController {
                 endpoint.lineStart(),
                 endpoint.lineEnd()
             ),
+            businessProfileBuilder.build(endpoint, callEdges, sqlFragments),
             callEdges.stream()
                 .map(edge -> new EndpointDetailResponse.CallEdgeView(
                     edge.fromSignature(),

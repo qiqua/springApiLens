@@ -53,7 +53,7 @@ async function loadWorkbench() {
     renderMethodOptions();
     renderEndpointList();
   } catch (error) {
-    setStatus(`Failed to load workbench: ${error.message}`, true);
+    setStatus(`加载工作台失败：${error.message}`, true);
   }
 }
 
@@ -61,13 +61,13 @@ async function scanRepository() {
   const repoPath = elements.repoPathInput.value.trim();
   const snapshotPath = elements.snapshotPathInput.value.trim();
   if (!repoPath) {
-    setStatus('Enter a local Git repository path before scanning.', true);
+    setStatus('请先输入本地 Git 仓库路径。', true);
     elements.repoPathInput.focus();
     return;
   }
 
   elements.scanButton.disabled = true;
-  setStatus('Scanning repository...', false);
+  setStatus('正在扫描代码仓库...', false);
 
   try {
     const response = await fetch('/api/scan', {
@@ -77,12 +77,12 @@ async function scanRepository() {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'Scan failed.');
+      throw new Error(body.message || '扫描失败。');
     }
-    setStatus(`Scan complete: ${body.endpointCount} endpoints, ${body.callEdgeCount} call edges.`, false);
+    setStatus(`扫描完成：${body.endpointCount} 个接口，${body.callEdgeCount} 条调用边。`, false);
     selectedKey = null;
     currentDetail = null;
-    renderEmptyDetail('Select an endpoint to inspect evidence.');
+    renderEmptyDetail('选择一个接口查看业务画像和证据。');
     await loadWorkbench();
     await loadHistory();
   } catch (error) {
@@ -97,7 +97,7 @@ async function loadHistory() {
     const response = await fetch('/api/history');
     const body = await response.json().catch(() => []);
     if (!response.ok) {
-      throw new Error(body.message || 'History failed to load.');
+      throw new Error(body.message || '扫描历史加载失败。');
     }
     renderHistory(body);
   } catch (error) {
@@ -110,7 +110,7 @@ function renderHistory(history) {
   elements.historyList.innerHTML = '';
   if (!history.length) {
     elements.historyList.className = 'history-list empty-state';
-    elements.historyList.textContent = 'No scan history yet.';
+    elements.historyList.textContent = '暂无扫描历史。';
     return;
   }
 
@@ -123,27 +123,27 @@ function renderHistory(history) {
     row.innerHTML = `
       <strong>${escapeHtml(entry.repoName || '-')}</strong>
       <span>${escapeHtml(entry.branchName || '-')} · ${escapeHtml(entry.headCommit || '-')}</span>
-      <span>${entry.endpointCount || 0} endpoints · ${formatDate(entry.scannedAt)}</span>
+      <span>${entry.endpointCount || 0} 个接口 · ${formatDate(entry.scannedAt)}</span>
     `;
     elements.historyList.appendChild(row);
   }
 }
 
 async function loadHistoryEntry(scanId) {
-  setStatus('Loading scan history...', false);
+  setStatus('正在加载扫描历史...', false);
   try {
     const response = await fetch(`/api/history/${encodeURIComponent(scanId)}/load`, {
       method: 'POST'
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'History entry failed to load.');
+      throw new Error(body.message || '扫描历史加载失败。');
     }
     selectedKey = null;
     currentDetail = null;
-    renderEmptyDetail('Select an endpoint to inspect evidence.');
+    renderEmptyDetail('选择一个接口查看业务画像和证据。');
     await loadWorkbench();
-    setStatus(`Loaded history: ${body.endpointCount} endpoints.`, false);
+    setStatus(`已加载历史扫描：${body.endpointCount} 个接口。`, false);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -154,7 +154,7 @@ async function loadAiConfig() {
     const response = await fetch('/api/ai-config');
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'AI config failed to load.');
+      throw new Error(body.message || 'AI 配置加载失败。');
     }
     renderAiConfig(body);
   } catch (error) {
@@ -169,13 +169,13 @@ function renderAiConfig(config) {
   elements.aiBaseUrlInput.value = config.baseUrl || '';
   elements.aiModelInput.value = config.model || '';
   elements.aiApiKeyEnvInput.value = config.apiKeyEnv || '';
-  elements.aiConfigStatus.textContent = config.configured ? 'Configured' : (config.message || 'Not configured');
+  elements.aiConfigStatus.textContent = config.configured ? '已配置' : translateAiMessage(config.message || '未配置');
   elements.aiConfigStatus.classList.toggle('error-text', !config.configured);
 }
 
 async function saveAiConfig() {
   elements.saveAiConfigButton.disabled = true;
-  elements.aiConfigStatus.textContent = 'Saving...';
+  elements.aiConfigStatus.textContent = '正在保存...';
   elements.aiConfigStatus.classList.remove('error-text');
 
   try {
@@ -192,7 +192,7 @@ async function saveAiConfig() {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'AI config failed to save.');
+      throw new Error(body.message || 'AI 配置保存失败。');
     }
     renderAiConfig(body);
   } catch (error) {
@@ -216,7 +216,7 @@ function renderSummary() {
 function renderMethodOptions() {
   const current = elements.methodFilter.value;
   const methods = workbench?.filters?.httpMethods || [];
-  elements.methodFilter.innerHTML = '<option value="">All</option>';
+  elements.methodFilter.innerHTML = '<option value="">全部</option>';
   for (const method of methods) {
     const option = document.createElement('option');
     option.value = method;
@@ -254,13 +254,13 @@ function filteredEndpoints() {
 
 function renderEndpointList() {
   const endpoints = filteredEndpoints();
-  elements.visibleCount.textContent = `${endpoints.length} shown`;
+  elements.visibleCount.textContent = `已显示 ${endpoints.length} 个`;
   elements.endpointList.innerHTML = '';
 
   if (endpoints.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = workbench?.summary?.endpointCount ? 'No endpoints match the current filters.' : 'No scanned endpoints yet.';
+    empty.textContent = workbench?.summary?.endpointCount ? '没有接口匹配当前筛选条件。' : '暂无已扫描接口。';
     elements.endpointList.appendChild(empty);
     return;
   }
@@ -280,10 +280,10 @@ function renderEndpointList() {
       </div>
       <div class="endpoint-meta">
         <span>${escapeHtml(endpoint.className || '-')}#${escapeHtml(endpoint.methodName || '-')}</span>
-        <span>${escapeHtml(endpoint.requestBodyType || 'no body')} -> ${escapeHtml(endpoint.responseType || 'unknown response')}</span>
-        <span>${endpoint.callCount || 0} calls</span>
+        <span>${escapeHtml(endpoint.requestBodyType || '无请求体')} -> ${escapeHtml(endpoint.responseType || '未知响应')}</span>
+        <span>${endpoint.callCount || 0} 条调用</span>
       </div>
-      <div class="chip-row">${renderChips(endpoint.tables, 'no table evidence')}${renderAuthorChips(endpoint.authors || [])}</div>
+      <div class="chip-row">${renderChips(endpoint.tables, '暂无表证据')}${renderAuthorChips(endpoint.authors || [])}</div>
     `;
     elements.endpointList.appendChild(row);
   }
@@ -293,13 +293,13 @@ async function selectEndpoint(key) {
   selectedKey = key;
   currentDetail = null;
   renderEndpointList();
-  renderEmptyDetail('Loading endpoint evidence...');
+  renderEmptyDetail('正在加载接口证据...');
 
   try {
     const response = await fetch(`/api/endpoints/${encodeURIComponent(key)}`);
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'Endpoint detail failed to load.');
+      throw new Error(body.message || '接口详情加载失败。');
     }
     renderDetail(body);
   } catch (error) {
@@ -313,60 +313,99 @@ function renderDetail(detail) {
   elements.detailContent.className = 'detail-content';
   elements.detailContent.innerHTML = `
     <section class="detail-section">
-      <h3>Basic Information</h3>
+      <h3>接口业务画像</h3>
+      ${renderBusinessProfile(detail.profile || {})}
+    </section>
+    <section class="detail-section">
+      <h3>基础信息</h3>
       <div class="info-grid">
-        <span class="meta-label">Endpoint</span><code>${escapeHtml(endpoint.httpMethod || '-')} ${escapeHtml(endpoint.path || '-')}</code>
-        <span class="meta-label">Controller</span><code>${escapeHtml(endpoint.className || '-')}#${escapeHtml(endpoint.methodName || '-')}</code>
-        <span class="meta-label">Source</span><code>${escapeHtml(endpoint.relativeFile || '-')}:${endpoint.lineStart || '-'}-${endpoint.lineEnd || '-'}</code>
+        <span class="meta-label">接口</span><code>${escapeHtml(endpoint.httpMethod || '-')} ${escapeHtml(endpoint.path || '-')}</code>
+        <span class="meta-label">控制器</span><code>${escapeHtml(endpoint.className || '-')}#${escapeHtml(endpoint.methodName || '-')}</code>
+        <span class="meta-label">源码位置</span><code>${escapeHtml(endpoint.relativeFile || '-')}:${endpoint.lineStart || '-'}-${endpoint.lineEnd || '-'}</code>
       </div>
     </section>
     <section class="detail-section">
-      <h3>Request / Response</h3>
+      <h3>请求和响应</h3>
       <div class="info-grid">
-        <span class="meta-label">Request params</span><code>${escapeHtml(endpoint.requestParamsJson || '[]')}</code>
-        <span class="meta-label">Request body</span><code>${escapeHtml(endpoint.requestBodyType || '-')}</code>
-        <span class="meta-label">Response</span><code>${escapeHtml(endpoint.responseType || '-')}</code>
+        <span class="meta-label">请求参数</span><code>${escapeHtml(endpoint.requestParamsJson || '[]')}</code>
+        <span class="meta-label">请求体</span><code>${escapeHtml(endpoint.requestBodyType || '-')}</code>
+        <span class="meta-label">响应</span><code>${escapeHtml(endpoint.responseType || '-')}</code>
       </div>
     </section>
     <section class="detail-section">
-      <h3>Call Evidence</h3>
+      <h3>调用链证据</h3>
       ${renderCallEdges(detail.callEdges || [])}
     </section>
     <section class="detail-section">
-      <h3>SQL And Tables</h3>
+      <h3>SQL 和数据表</h3>
       <div class="chip-row">${renderChips(detail.tables || [])}</div>
       ${renderSqlFragments(detail.sqlFragments || [])}
     </section>
     <section class="detail-section">
-      <h3>Authors</h3>
+      <h3>提交人归属</h3>
       ${renderAuthors(detail.authors || [])}
     </section>
     <section class="detail-section">
       <div class="section-title-row">
-        <h3>AI Summary</h3>
-        <button id="aiSummaryButton" class="secondary-button" type="button">Generate</button>
+        <h3>AI 分析摘要</h3>
+        <button id="aiSummaryButton" class="secondary-button" type="button">生成摘要</button>
       </div>
-      <div id="aiSummaryContent" class="ai-summary muted">Configure AI, then generate an evidence-based summary.</div>
+      <div id="aiSummaryContent" class="ai-summary muted">配置 AI 后，可基于当前证据生成接口分析摘要。</div>
     </section>
   `;
   document.getElementById('aiSummaryButton').addEventListener('click', generateAiSummary);
 }
 
+function renderBusinessProfile(profile) {
+  return `
+    <div class="profile-summary">
+      <div>
+        <span class="meta-label">接口用途</span>
+        <strong>${escapeHtml(profile.purpose || '暂无画像。')}</strong>
+      </div>
+      <div>
+        <span class="meta-label">调用方式</span>
+        <strong>${escapeHtml(profile.callGuide || '暂无调用信息。')}</strong>
+      </div>
+    </div>
+    <div class="profile-grid">
+      ${renderProfileBlock('业务流程', profile.businessFlow)}
+      ${renderProfileBlock('涉及数据表', profile.dataTables)}
+      ${renderProfileBlock('作者归属', profile.authorSummary)}
+      ${renderProfileBlock('风险点', profile.risks)}
+      ${renderProfileBlock('测试建议', profile.testSuggestions)}
+    </div>
+  `;
+}
+
+function renderProfileBlock(title, values) {
+  const items = values || [];
+  const content = items.length
+    ? `<ul>${items.map((value) => `<li>${escapeHtml(value)}</li>`).join('')}</ul>`
+    : '<p class="muted">暂无证据。</p>';
+  return `
+    <div class="profile-block">
+      <h4>${escapeHtml(title)}</h4>
+      ${content}
+    </div>
+  `;
+}
+
 function renderCallEdges(callEdges) {
   if (!callEdges.length) {
-    return '<p class="muted">No deterministic call evidence was found for this endpoint.</p>';
+    return '<p class="muted">暂未识别到该接口的确定性调用链证据。</p>';
   }
   return `<div class="evidence-list">${callEdges.map((edge) => `
     <div class="evidence-item">
       <code>${escapeHtml(edge.fromSignature)} -> ${escapeHtml(edge.toSignature)}</code>
-      <span class="muted">confidence ${Number(edge.confidence || 0).toFixed(2)} · ${escapeHtml(edge.evidence || '-')}</span>
+      <span class="muted">置信度 ${Number(edge.confidence || 0).toFixed(2)} · ${escapeHtml(edge.evidence || '-')}</span>
     </div>
   `).join('')}</div>`;
 }
 
 function renderSqlFragments(sqlFragments) {
   if (!sqlFragments.length) {
-    return '<p class="muted">No related SQL fragment was found for this endpoint.</p>';
+    return '<p class="muted">暂未识别到该接口相关 SQL 片段。</p>';
   }
   return `<div class="evidence-list">${sqlFragments.map((fragment) => `
     <div class="evidence-item">
@@ -380,13 +419,13 @@ function renderSqlFragments(sqlFragments) {
 
 function renderAuthors(authors) {
   if (!authors.length) {
-    return '<p class="muted">No Git blame author evidence was found for this endpoint.</p>';
+    return '<p class="muted">暂未识别到该接口的 Git blame 作者证据。</p>';
   }
   return `<div class="evidence-list">${authors.map((author) => `
     <div class="evidence-item">
       <div class="author-row">
         <strong>${escapeHtml(author.name || '-')}</strong>
-        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% · ${author.lineCount || 0} lines</span>
+        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% · ${author.lineCount || 0} 行</span>
       </div>
       <div class="author-bar" aria-hidden="true"><span style="width: ${Math.max(0, Math.min(100, Number(author.ratio || 0) * 100))}%"></span></div>
       <span class="muted">${escapeHtml(author.email || '')}</span>
@@ -403,7 +442,7 @@ async function generateAiSummary() {
   const content = document.getElementById('aiSummaryContent');
   button.disabled = true;
   content.className = 'ai-summary muted';
-  content.textContent = 'Generating summary from endpoint evidence...';
+  content.textContent = '正在根据接口证据生成摘要...';
 
   try {
     const response = await fetch(`/api/endpoints/${encodeURIComponent(selectedKey)}/ai-summary`, {
@@ -411,7 +450,7 @@ async function generateAiSummary() {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.message || 'AI summary failed.');
+      throw new Error(body.message || 'AI 摘要生成失败。');
     }
     renderAiSummary(body);
   } catch (error) {
@@ -426,7 +465,7 @@ function renderAiSummary(summary) {
   const content = document.getElementById('aiSummaryContent');
   if (!summary.configured) {
     content.className = 'ai-summary muted';
-    content.textContent = summary.message || 'AI is not configured.';
+    content.textContent = translateAiMessage(summary.message || 'AI 未配置。');
     return;
   }
 
@@ -437,7 +476,7 @@ function renderAiSummary(summary) {
   `;
 }
 
-function renderChips(values, emptyText = 'no evidence') {
+function renderChips(values, emptyText = '暂无证据') {
   const items = values || [];
   if (!items.length) {
     return `<span class="chip">${escapeHtml(emptyText)}</span>`;
@@ -480,4 +519,13 @@ function formatDate(value) {
     return value;
   }
   return date.toLocaleString();
+}
+
+function translateAiMessage(message) {
+  const dictionary = {
+    'AI is disabled.': 'AI 已禁用。',
+    'AI is enabled but baseUrl, model, or API key is missing.': 'AI 已启用，但 Base URL、模型或密钥环境变量缺失。',
+    'AI is disabled. Configure .spring-api-lens/ai-config.json to enable summaries.': 'AI 已禁用，请在 AI 配置中启用后再生成摘要。'
+  };
+  return dictionary[message] || message;
 }

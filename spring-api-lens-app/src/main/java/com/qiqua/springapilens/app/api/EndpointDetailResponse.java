@@ -4,6 +4,7 @@ import java.util.List;
 
 public record EndpointDetailResponse(
     EndpointView endpoint,
+    BusinessProfileView profile,
     List<CallEdgeView> callEdges,
     List<SqlFragmentView> sqlFragments,
     List<String> tables,
@@ -47,6 +48,17 @@ public record EndpointDetailResponse(
         String email,
         double ratio,
         int lineCount
+    ) {
+    }
+
+    public record BusinessProfileView(
+        String purpose,
+        String callGuide,
+        List<String> businessFlow,
+        List<String> dataTables,
+        List<String> authorSummary,
+        List<String> risks,
+        List<String> testSuggestions
     ) {
     }
 }

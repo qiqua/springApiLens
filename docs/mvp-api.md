@@ -110,6 +110,25 @@ Response:
     "lineStart": 42,
     "lineEnd": 86
   },
+  "profile": {
+    "purpose": "处理 POST /api/order/create，对应 OrderController#create。",
+    "callGuide": "使用 POST /api/order/create 调用，请求体 CreateOrderRequest，响应 ApiResult<OrderVO>。",
+    "businessFlow": [
+      "OrderController.create() -> OrderService.create()：orderService.create"
+    ],
+    "dataTables": [
+      "order_main（insert，OrderMapper.insertOrder）"
+    ],
+    "authorSummary": [
+      "Ada 贡献 18 行，约 75%。"
+    ],
+    "risks": [
+      "该接口包含写操作 insert，建议重点关注幂等性、事务边界和参数校验。"
+    ],
+    "testSuggestions": [
+      "验证 POST /api/order/create 的正常请求、参数缺失和异常分支。"
+    ]
+  },
   "callEdges": [
     {
       "fromSignature": "OrderController.create()",
@@ -258,6 +277,8 @@ The Spring Boot app serves the local workbench at:
 ```text
 http://localhost:8080/
 ```
+
+The workbench UI uses Chinese user-facing text. Endpoint detail shows the structured business profile before the raw evidence sections.
 
 ## Implementation Note
 

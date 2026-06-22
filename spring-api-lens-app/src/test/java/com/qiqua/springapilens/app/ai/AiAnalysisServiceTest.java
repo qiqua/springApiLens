@@ -33,6 +33,9 @@ class AiAnalysisServiceTest {
         assertThat(summary.model()).isEqualTo("qwen");
         assertThat(summary.content()).contains("创建订单");
         assertThat(capturedRequest.get().prompt()).contains("POST /api/orders");
+        assertThat(capturedRequest.get().prompt()).contains("请用中文输出");
+        assertThat(capturedRequest.get().prompt()).contains("接口用途");
+        assertThat(capturedRequest.get().prompt()).contains("业务逻辑");
         assertThat(capturedRequest.get().prompt()).contains("Ada <ada@example.com>");
         assertThat(capturedRequest.get().prompt()).contains("OrderMapper.insert");
         assertThat(capturedRequest.get().prompt()).contains("orders");
