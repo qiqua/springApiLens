@@ -13,7 +13,7 @@ mvn test
 ## Run
 
 ```powershell
-mvn -pl spring-api-lens-app spring-boot:run
+mvn -pl spring-api-lens-app -am org.springframework.boot:spring-boot-maven-plugin:3.4.2:run
 ```
 
 ## Scan A Repository
