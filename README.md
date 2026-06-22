@@ -16,6 +16,16 @@ mvn test
 mvn -pl spring-api-lens-app -am org.springframework.boot:spring-boot-maven-plugin:3.4.2:run
 ```
 
+## Open Workbench
+
+After the app starts, open:
+
+```text
+http://localhost:8080/
+```
+
+The local workbench lets you scan one Git repository, browse endpoints, filter results, and inspect endpoint evidence.
+
 ## Scan A Repository
 
 ```powershell
@@ -28,6 +38,18 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/scan -ContentType 
 Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/endpoints
 ```
 
+## Workbench API
+
+```powershell
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/workbench
+```
+
+Select an endpoint key from the workbench payload, then inspect detail evidence:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/endpoints/<endpointKey>
+```
+
 ## Current MVP Notes
 
 - Java source scanning currently uses lightweight JDK-based parsing so this repository builds in the available Maven environment.
@@ -38,4 +60,6 @@ Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/endpoints
 
 - [Interface Overview Tool Design](docs/superpowers/specs/2026-06-22-interface-overview-tool-design.md)
 - [Phase One MVP Plan](docs/superpowers/plans/2026-06-22-phase-one-mvp.md)
+- [Phase Two UI MVP Design](docs/superpowers/specs/2026-06-22-phase-two-ui-mvp-design.md)
+- [Phase Two UI MVP Plan](docs/superpowers/plans/2026-06-22-phase-two-ui-mvp.md)
 
