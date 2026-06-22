@@ -1,12 +1,15 @@
 package com.qiqua.springapilens.app.api;
 
 import com.qiqua.springapilens.core.model.ApiEndpoint;
+import com.qiqua.springapilens.core.model.AuthorContribution;
 import com.qiqua.springapilens.core.model.CallEdge;
 import com.qiqua.springapilens.core.model.CodeSymbol;
 import com.qiqua.springapilens.core.model.RepositoryInfo;
 import com.qiqua.springapilens.core.model.ScanResult;
 import com.qiqua.springapilens.core.model.SqlFragment;
 import com.qiqua.springapilens.core.scanner.RepositoryScanner;
+import com.qiqua.springapilens.app.ai.AiAnalysisService;
+import com.qiqua.springapilens.app.ai.AiSummary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,9 @@ class ScanControllerTest {
 
     @MockBean
     RepositoryScanner repositoryScanner;
+
+    @MockBean
+    AiAnalysisService aiAnalysisService;
 
     @BeforeEach
     void clearLatestScan() {
@@ -73,6 +79,8 @@ class ScanControllerTest {
             .andExpect(jsonPath("$.summary.tableCount").value(1))
             .andExpect(jsonPath("$.endpoints[0].httpMethod").value("POST"))
             .andExpect(jsonPath("$.endpoints[0].key").isString())
+            .andExpect(jsonPath("$.endpoints[0].authors[0]").value("Ada"))
+            .andExpect(jsonPath("$.filters.authors[0]").value("Ada"))
             .andExpect(jsonPath("$.filters.httpMethods[0]").value("POST"));
     }
 
@@ -92,7 +100,9 @@ class ScanControllerTest {
             .andExpect(jsonPath("$.endpoint.httpMethod").value("POST"))
             .andExpect(jsonPath("$.callEdges[0].evidence").value("service.create(request)"))
             .andExpect(jsonPath("$.sqlFragments[0].operationType").value("insert"))
-            .andExpect(jsonPath("$.tables[0]").value("orders"));
+            .andExpect(jsonPath("$.tables[0]").value("orders"))
+            .andExpect(jsonPath("$.authors[0].name").value("Ada"))
+            .andExpect(jsonPath("$.authors[0].lineCount").value(12));
     }
 
     @Test
@@ -100,6 +110,24 @@ class ScanControllerTest {
         mockMvc.perform(get("/api/endpoints/missing"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.message").value("Endpoint was not found in the latest scan."));
+    }
+
+    @Test
+    void endpointAiSummaryReturnsGeneratedAnalysisForKnownEndpoint() throws Exception {
+        when(repositoryScanner.scan(any(Path.class))).thenReturn(sampleScanResult());
+        when(aiAnalysisService.analyze(any(), any(), any(), any(), any()))
+            .thenReturn(new AiSummary(true, true, "local", "qwen", "作者: Ada\n业务逻辑: 创建订单。", ""));
+
+        mockMvc.perform(post("/api/scan")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"repoPath\":\"D:\\\\workspace\\\\demo\",\"snapshotPath\":\"\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/endpoints/{endpointKey}/ai-summary", EndpointKey.from(sampleEndpoint())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.provider").value("local"))
+            .andExpect(jsonPath("$.model").value("qwen"))
+            .andExpect(jsonPath("$.content").value("作者: Ada\n业务逻辑: 创建订单。"));
     }
 
     private ScanResult sampleScanResult() {
@@ -148,7 +176,8 @@ class ScanControllerTest {
             "CreateOrderRequest",
             "ApiResult<OrderVO>",
             20,
-            36
+            36,
+            List.of(new AuthorContribution("Ada", "ada@example.com", 0.75, 12))
         );
     }
 }

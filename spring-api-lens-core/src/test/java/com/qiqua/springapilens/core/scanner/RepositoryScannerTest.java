@@ -54,6 +54,12 @@ class RepositoryScannerTest {
 
         assertThat(result.repositoryInfo().repoName()).isEqualTo(repoRoot.getFileName().toString());
         assertThat(result.endpoints()).hasSize(1);
+        assertThat(result.endpoints().getFirst().authors())
+            .singleElement()
+            .satisfies(author -> {
+                assertThat(author.name()).isEqualTo("Zhang San");
+                assertThat(author.email()).isEqualTo("zhang@example.com");
+            });
         assertThat(result.callEdges()).hasSize(2);
         assertThat(result.sqlFragments()).hasSize(1);
     }

@@ -1,6 +1,9 @@
 package com.qiqua.springapilens.app.api;
 
+import com.qiqua.springapilens.app.ai.AiAnalysisService;
+import com.qiqua.springapilens.app.ai.AiSummary;
 import com.qiqua.springapilens.core.model.ApiEndpoint;
+import com.qiqua.springapilens.core.model.AuthorContribution;
 import com.qiqua.springapilens.core.model.CallEdge;
 import com.qiqua.springapilens.core.model.RepositoryInfo;
 import com.qiqua.springapilens.core.model.ScanResult;
@@ -30,10 +33,12 @@ import java.util.stream.Collectors;
 public class ScanController {
     private final RepositoryScanner repositoryScanner;
     private final LatestScanStore latestScanStore;
+    private final AiAnalysisService aiAnalysisService;
 
-    public ScanController(RepositoryScanner repositoryScanner, LatestScanStore latestScanStore) {
+    public ScanController(RepositoryScanner repositoryScanner, LatestScanStore latestScanStore, AiAnalysisService aiAnalysisService) {
         this.repositoryScanner = repositoryScanner;
         this.latestScanStore = latestScanStore;
+        this.aiAnalysisService = aiAnalysisService;
     }
 
     @PostMapping("/scan")
@@ -89,6 +94,25 @@ public class ScanController {
             .orElseGet(this::endpointNotFound);
     }
 
+    @PostMapping("/endpoints/{endpointKey}/ai-summary")
+    public ResponseEntity<?> endpointAiSummary(@PathVariable("endpointKey") String endpointKey) {
+        if (latestScanStore.latest().isEmpty()) {
+            return endpointNotFound();
+        }
+
+        ScanResult result = latestScanStore.latest().get();
+        return result.endpoints().stream()
+            .filter(endpoint -> EndpointKey.matches(endpoint, endpointKey))
+            .findFirst()
+            .<ResponseEntity<?>>map(endpoint -> {
+                List<CallEdge> callEdges = relatedCallEdges(result, endpoint);
+                List<SqlFragment> sqlFragments = relatedSqlFragments(result, endpoint);
+                AiSummary summary = aiAnalysisService.analyze(result, endpoint, callEdges, sqlFragments, tableNames(sqlFragments));
+                return ResponseEntity.ok(summary);
+            })
+            .orElseGet(this::endpointNotFound);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
         return ResponseEntity.badRequest().body(new ApiErrorResponse(exception.getMessage()));
@@ -119,7 +143,8 @@ public class ScanController {
                 endpoint.lineStart(),
                 endpoint.lineEnd(),
                 tableNames(relatedSqlFragments(result, endpoint)),
-                relatedCallEdges(result, endpoint).size()
+                relatedCallEdges(result, endpoint).size(),
+                authorNames(endpoint)
             ))
             .toList();
 
@@ -144,7 +169,7 @@ public class ScanController {
                 tables.size()
             ),
             endpoints,
-            new WorkbenchResponse.FilterView(httpMethods, tables, List.of())
+            new WorkbenchResponse.FilterView(httpMethods, tables, authorFilters(result))
         );
     }
 
@@ -184,7 +209,14 @@ public class ScanController {
                 ))
                 .toList(),
             tableNames(sqlFragments),
-            List.of()
+            endpoint.authors().stream()
+                .map(author -> new EndpointDetailResponse.AuthorView(
+                    author.name(),
+                    author.email(),
+                    author.ratio(),
+                    author.lineCount()
+                ))
+                .toList()
         );
     }
 
@@ -249,6 +281,23 @@ public class ScanController {
             .flatMap(fragment -> fragment.tables().stream())
             .distinct()
             .sorted(Comparator.naturalOrder())
+            .toList();
+    }
+
+    private List<String> authorNames(ApiEndpoint endpoint) {
+        return endpoint.authors().stream()
+            .map(AuthorContribution::name)
+            .filter(name -> !name.isBlank())
+            .distinct()
+            .sorted()
+            .toList();
+    }
+
+    private List<String> authorFilters(ScanResult result) {
+        return result.endpoints().stream()
+            .flatMap(endpoint -> authorNames(endpoint).stream())
+            .distinct()
+            .sorted()
             .toList();
     }
 }

@@ -1,4 +1,5 @@
 .worktrees/
+.spring-api-lens/ai-config.json
 
 target/
 *.db

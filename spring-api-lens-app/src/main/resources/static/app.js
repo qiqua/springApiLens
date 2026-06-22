@@ -1,5 +1,6 @@
-let workbench = null;
+﻿let workbench = null;
 let selectedKey = null;
+let currentDetail = null;
 
 const elements = {
   repoPathInput: document.getElementById('repoPathInput'),
@@ -67,6 +68,7 @@ async function scanRepository() {
     }
     setStatus(`Scan complete: ${body.endpointCount} endpoints, ${body.callEdgeCount} call edges.`, false);
     selectedKey = null;
+    currentDetail = null;
     renderEmptyDetail('Select an endpoint to inspect evidence.');
     await loadWorkbench();
   } catch (error) {
@@ -156,7 +158,7 @@ function renderEndpointList() {
         <span>${escapeHtml(endpoint.requestBodyType || 'no body')} -> ${escapeHtml(endpoint.responseType || 'unknown response')}</span>
         <span>${endpoint.callCount || 0} calls</span>
       </div>
-      <div class="chip-row">${renderChips(endpoint.tables)}</div>
+      <div class="chip-row">${renderChips(endpoint.tables, 'no table evidence')}${renderAuthorChips(endpoint.authors || [])}</div>
     `;
     elements.endpointList.appendChild(row);
   }
@@ -164,6 +166,7 @@ function renderEndpointList() {
 
 async function selectEndpoint(key) {
   selectedKey = key;
+  currentDetail = null;
   renderEndpointList();
   renderEmptyDetail('Loading endpoint evidence...');
 
@@ -180,6 +183,7 @@ async function selectEndpoint(key) {
 }
 
 function renderDetail(detail) {
+  currentDetail = detail;
   const endpoint = detail.endpoint || {};
   elements.detailContent.className = 'detail-content';
   elements.detailContent.innerHTML = `
@@ -212,7 +216,15 @@ function renderDetail(detail) {
       <h3>Authors</h3>
       ${renderAuthors(detail.authors || [])}
     </section>
+    <section class="detail-section">
+      <div class="section-title-row">
+        <h3>AI Summary</h3>
+        <button id="aiSummaryButton" class="secondary-button" type="button">Generate</button>
+      </div>
+      <div id="aiSummaryContent" class="ai-summary muted">Configure AI, then generate an evidence-based summary.</div>
+    </section>
   `;
+  document.getElementById('aiSummaryButton').addEventListener('click', generateAiSummary);
 }
 
 function renderCallEdges(callEdges) {
@@ -222,7 +234,7 @@ function renderCallEdges(callEdges) {
   return `<div class="evidence-list">${callEdges.map((edge) => `
     <div class="evidence-item">
       <code>${escapeHtml(edge.fromSignature)} -> ${escapeHtml(edge.toSignature)}</code>
-      <span class="muted">confidence ${Number(edge.confidence || 0).toFixed(2)} · ${escapeHtml(edge.evidence || '-')}</span>
+      <span class="muted">confidence ${Number(edge.confidence || 0).toFixed(2)} 路 ${escapeHtml(edge.evidence || '-')}</span>
     </div>
   `).join('')}</div>`;
 }
@@ -233,31 +245,86 @@ function renderSqlFragments(sqlFragments) {
   }
   return `<div class="evidence-list">${sqlFragments.map((fragment) => `
     <div class="evidence-item">
-      <strong>${escapeHtml(fragment.operationType || '-')} · ${escapeHtml(fragment.mapperNamespace || '-')}.${escapeHtml(fragment.mapperMethod || '-')}</strong>
+      <strong>${escapeHtml(fragment.operationType || '-')} 路 ${escapeHtml(fragment.mapperNamespace || '-')}.${escapeHtml(fragment.mapperMethod || '-')}</strong>
       <span class="muted">${escapeHtml(fragment.relativeFile || '-')}</span>
       <pre class="code-block">${escapeHtml(fragment.sqlText || '')}</pre>
     </div>
   `).join('')}</div>`;
 }
 
+
 function renderAuthors(authors) {
   if (!authors.length) {
-    return '<p class="muted">Author ratios are not connected to the UI payload yet.</p>';
+    return '<p class="muted">No Git blame author evidence was found for this endpoint.</p>';
   }
   return `<div class="evidence-list">${authors.map((author) => `
     <div class="evidence-item">
-      <strong>${escapeHtml(author.name || '-')}</strong>
-      <span class="muted">${escapeHtml(author.email || '')} · ${Number(author.ratio || 0).toFixed(2)} · ${author.lineCount || 0} lines</span>
+      <div class="author-row">
+        <strong>${escapeHtml(author.name || '-')}</strong>
+        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% 路 ${author.lineCount || 0} lines</span>
+      </div>
+      <div class="author-bar" aria-hidden="true"><span style="width: ${Math.max(0, Math.min(100, Number(author.ratio || 0) * 100))}%"></span></div>
+      <span class="muted">${escapeHtml(author.email || '')}</span>
     </div>
   `).join('')}</div>`;
 }
 
-function renderChips(values) {
+async function generateAiSummary() {
+  if (!selectedKey || !currentDetail) {
+    return;
+  }
+
+  const button = document.getElementById('aiSummaryButton');
+  const content = document.getElementById('aiSummaryContent');
+  button.disabled = true;
+  content.className = 'ai-summary muted';
+  content.textContent = 'Generating summary from endpoint evidence...';
+
+  try {
+    const response = await fetch(`/api/endpoints/${encodeURIComponent(selectedKey)}/ai-summary`, {
+      method: 'POST'
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.message || 'AI summary failed.');
+    }
+    renderAiSummary(body);
+  } catch (error) {
+    content.className = 'ai-summary error';
+    content.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderAiSummary(summary) {
+  const content = document.getElementById('aiSummaryContent');
+  if (!summary.configured) {
+    content.className = 'ai-summary muted';
+    content.textContent = summary.message || 'AI is not configured.';
+    return;
+  }
+
+  content.className = 'ai-summary';
+  content.innerHTML = `
+    <div class="ai-meta">${escapeHtml(summary.provider || 'AI')} 路 ${escapeHtml(summary.model || '-')}</div>
+    <pre class="summary-block">${escapeHtml(summary.content || '')}</pre>
+  `;
+}
+
+function renderChips(values, emptyText = 'no evidence') {
   const items = values || [];
   if (!items.length) {
-    return '<span class="chip">no table evidence</span>';
+    return `<span class="chip">${escapeHtml(emptyText)}</span>`;
   }
   return items.map((value) => `<span class="chip">${escapeHtml(value)}</span>`).join('');
+}
+
+function renderAuthorChips(authors) {
+  if (!authors.length) {
+    return '';
+  }
+  return authors.map((value) => `<span class="chip author-chip">${escapeHtml(value)}</span>`).join('');
 }
 
 function renderEmptyDetail(message) {

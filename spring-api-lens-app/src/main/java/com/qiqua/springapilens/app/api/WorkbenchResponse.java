@@ -37,7 +37,8 @@ public record WorkbenchResponse(
         int lineStart,
         int lineEnd,
         List<String> tables,
-        int callCount
+        int callCount,
+        List<String> authors
     ) {
     }
 

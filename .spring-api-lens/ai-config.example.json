@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "provider": "openai-compatible",
+  "baseUrl": "http://127.0.0.1:11434",
+  "model": "qwen2.5-coder:7b",
+  "apiKeyEnv": "SPRING_API_LENS_AI_KEY"
+}

@@ -77,13 +77,14 @@ Response:
       "lineStart": 42,
       "lineEnd": 86,
       "tables": ["order_main"],
-      "callCount": 3
+      "callCount": 3,
+      "authors": ["Ada"]
     }
   ],
   "filters": {
     "httpMethods": ["GET", "POST"],
     "tables": ["order_main"],
-    "authors": []
+    "authors": ["Ada"]
   }
 }
 ```
@@ -128,7 +129,14 @@ Response:
     }
   ],
   "tables": ["order_main"],
-  "authors": []
+  "authors": [
+    {
+      "name": "Ada",
+      "email": "ada@example.com",
+      "ratio": 0.75,
+      "lineCount": 18
+    }
+  ]
 }
 ```
 
@@ -139,6 +147,38 @@ If the endpoint key is not found, the API returns HTTP 404:
   "message": "Endpoint was not found in the latest scan."
 }
 ```
+
+## POST /api/endpoints/{endpointKey}/ai-summary
+
+Generates an optional OpenAI-compatible AI summary for one endpoint from the latest in-memory scan.
+
+If AI is configured:
+
+```json
+{
+  "enabled": true,
+  "configured": true,
+  "provider": "deepseek",
+  "model": "deepseek-chat",
+  "content": "作者: Ada\n业务逻辑: ...",
+  "message": ""
+}
+```
+
+If AI is not configured:
+
+```json
+{
+  "enabled": false,
+  "configured": false,
+  "provider": "",
+  "model": "",
+  "content": "",
+  "message": "AI is disabled. Configure .spring-api-lens/ai-config.json to enable summaries."
+}
+```
+
+AI config is loaded from `.spring-api-lens/ai-config.json` by default, or from `SPRING_API_LENS_AI_CONFIG` when that environment variable is set. API keys are read from the environment variable named by `apiKeyEnv`.
 
 ## Static Workbench
 

@@ -294,6 +294,11 @@ select {
   overflow-wrap: anywhere;
 }
 
+.author-chip {
+  background: #f0f7ee;
+  color: #2f5f32;
+}
+
 .detail-content {
   display: grid;
   align-content: start;
@@ -316,6 +321,37 @@ select {
 .detail-section h3 {
   margin: 0;
   font-size: 14px;
+}
+
+.section-title-row,
+.author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.secondary-button {
+  min-width: 84px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.secondary-button:hover,
+.secondary-button:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 111, 143, 0.12);
+  outline: none;
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
 }
 
 .info-grid {
@@ -351,6 +387,46 @@ select {
   background: var(--surface-muted);
   display: grid;
   gap: 5px;
+}
+
+.author-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #e5ebf0;
+  overflow: hidden;
+}
+
+.author-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.ai-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-summary.error {
+  color: var(--danger);
+}
+
+.ai-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.summary-block {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-family: "Segoe UI", Arial, sans-serif;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .muted {
