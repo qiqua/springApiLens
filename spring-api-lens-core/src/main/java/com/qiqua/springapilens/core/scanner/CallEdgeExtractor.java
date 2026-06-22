@@ -57,7 +57,7 @@ public class CallEdgeExtractor {
                 }
                 String fromSignature = className + "." + methodName + "()";
                 int endLine = findMethodEndLine(lines, i);
-                for (int lineIndex = i; lineIndex < endLine; lineIndex++) {
+                for (int lineIndex = i; lineIndex < endLine && lineIndex < lines.size(); lineIndex++) {
                     Matcher callMatcher = CALL_PATTERN.matcher(lines.get(lineIndex));
                     while (callMatcher.find()) {
                         String variable = callMatcher.group(1);

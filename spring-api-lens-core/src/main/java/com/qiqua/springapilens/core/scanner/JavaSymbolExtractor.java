@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class JavaSymbolExtractor {
     private static final Pattern TYPE_PATTERN = Pattern.compile("\\b(?:class|interface)\\s+(\\w+)");
     private static final Pattern METHOD_PATTERN = Pattern.compile(
-        "^\\s*(?:public|protected|private)?\\s*(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.\\s]+?)\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*(?:\\{|;).*"
+        "\\b(?:public\\s+|protected\\s+|private\\s+)?(?:static\\s+)?(?:final\\s+)?(?!if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b|new\\b)([\\w<>?,.]+)\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*(?:\\{|;)"
     );
 
     public List<CodeSymbol> extract(Path repoRoot, List<Path> javaFiles) {
@@ -37,23 +37,22 @@ public class JavaSymbolExtractor {
             List<CodeSymbol> symbols = new ArrayList<>();
             for (int i = 0; i < lines.size(); i++) {
                 Matcher matcher = METHOD_PATTERN.matcher(lines.get(i));
-                if (!matcher.matches()) {
-                    continue;
+                while (matcher.find()) {
+                    String methodName = matcher.group(2);
+                    if (methodName.equals(className)) {
+                        continue;
+                    }
+                    String signature = className + "." + methodName + "()";
+                    symbols.add(new CodeSymbol(
+                        repoRoot.relativize(javaFile).toString().replace('\\', '/'),
+                        "METHOD",
+                        className,
+                        methodName,
+                        signature,
+                        i + 1,
+                        findMethodEndLine(lines, i)
+                    ));
                 }
-                String methodName = matcher.group(2);
-                if (methodName.equals(className)) {
-                    continue;
-                }
-                String signature = className + "." + methodName + "()";
-                symbols.add(new CodeSymbol(
-                    repoRoot.relativize(javaFile).toString().replace('\\', '/'),
-                    "METHOD",
-                    className,
-                    methodName,
-                    signature,
-                    i + 1,
-                    findMethodEndLine(lines, i)
-                ));
             }
             return symbols;
         } catch (IOException e) {
