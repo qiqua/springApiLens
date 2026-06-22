@@ -1,4 +1,4 @@
-# MVP API
+﻿# MVP API
 
 ## POST /api/scan
 
@@ -160,7 +160,7 @@ If AI is configured:
   "configured": true,
   "provider": "deepseek",
   "model": "deepseek-chat",
-  "content": "作者: Ada\n业务逻辑: ...",
+  "content": "Author: Ada\nBusiness logic: ...",
   "message": ""
 }
 ```
@@ -180,6 +180,77 @@ If AI is not configured:
 
 AI config is loaded from `.spring-api-lens/ai-config.json` by default, or from `SPRING_API_LENS_AI_CONFIG` when that environment variable is set. API keys are read from the environment variable named by `apiKeyEnv`.
 
+## GET /api/history
+
+Returns previous scans saved under `.spring-api-lens/history/`.
+
+Response:
+
+```json
+[
+  {
+    "id": "20260622090000-abcd1234",
+    "scannedAt": "2026-06-22T09:00:00Z",
+    "repoName": "demo-springboot",
+    "rootPath": "D:\\workspace\\demo-springboot",
+    "branchName": "main",
+    "headCommit": "abc123",
+    "endpointCount": 4,
+    "callEdgeCount": 12,
+    "sqlFragmentCount": 8
+  }
+]
+```
+
+## POST /api/history/{scanId}/load
+
+Loads one previous scan into the in-memory workbench state.
+
+Response:
+
+```json
+{
+  "repoName": "demo-springboot",
+  "endpointCount": 4,
+  "callEdgeCount": 12,
+  "sqlFragmentCount": 8
+}
+```
+
+## GET /api/ai-config
+
+Returns the current AI configuration status without exposing the raw API key.
+
+Response:
+
+```json
+{
+  "enabled": true,
+  "configured": false,
+  "provider": "deepseek",
+  "baseUrl": "https://api.deepseek.com",
+  "model": "deepseek-chat",
+  "apiKeyEnv": "SPRING_API_LENS_AI_KEY",
+  "message": "AI is enabled but baseUrl, model, or API key is missing."
+}
+```
+
+## POST /api/ai-config
+
+Saves AI provider settings to the local AI config file. The raw key is not part of the request; only the environment variable name is stored.
+
+Request:
+
+```json
+{
+  "enabled": true,
+  "provider": "local",
+  "baseUrl": "http://127.0.0.1:11434",
+  "model": "qwen",
+  "apiKeyEnv": "LOCAL_AI_KEY"
+}
+```
+
 ## Static Workbench
 
 The Spring Boot app serves the local workbench at:
@@ -190,4 +261,4 @@ http://localhost:8080/
 
 ## Implementation Note
 
-The first MVP uses a TSV endpoint snapshot via `ScanResultRepository`. SQLite is still part of the target architecture, but the driver is not available in the current Maven repository, so the persistence boundary is intentionally kept small and replaceable.
+The first MVP uses a TSV endpoint snapshot via `ScanResultRepository`. The workbench scan history currently uses JSON files. SQLite is still part of the target architecture, but the driver is not available in the current Maven repository, so the persistence boundary is intentionally kept small and replaceable.

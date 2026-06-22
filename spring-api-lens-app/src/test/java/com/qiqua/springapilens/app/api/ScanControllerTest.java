@@ -10,6 +10,9 @@ import com.qiqua.springapilens.core.model.SqlFragment;
 import com.qiqua.springapilens.core.scanner.RepositoryScanner;
 import com.qiqua.springapilens.app.ai.AiAnalysisService;
 import com.qiqua.springapilens.app.ai.AiSummary;
+import com.qiqua.springapilens.app.config.AiConfigService;
+import com.qiqua.springapilens.app.history.ScanHistoryEntry;
+import com.qiqua.springapilens.app.history.ScanHistoryStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +23,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +50,12 @@ class ScanControllerTest {
 
     @MockBean
     AiAnalysisService aiAnalysisService;
+
+    @MockBean
+    ScanHistoryStore scanHistoryStore;
+
+    @MockBean
+    AiConfigService aiConfigService;
 
     @BeforeEach
     void clearLatestScan() {
@@ -66,6 +79,7 @@ class ScanControllerTest {
     @Test
     void workbenchReturnsLatestScanPayload() throws Exception {
         when(repositoryScanner.scan(any(Path.class))).thenReturn(sampleScanResult());
+        when(scanHistoryStore.save(any())).thenReturn(sampleHistoryEntry());
 
         mockMvc.perform(post("/api/scan")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -82,6 +96,66 @@ class ScanControllerTest {
             .andExpect(jsonPath("$.endpoints[0].authors[0]").value("Ada"))
             .andExpect(jsonPath("$.filters.authors[0]").value("Ada"))
             .andExpect(jsonPath("$.filters.httpMethods[0]").value("POST"));
+    }
+
+    @Test
+    void scanSavesHistoryEntry() throws Exception {
+        when(repositoryScanner.scan(any(Path.class))).thenReturn(sampleScanResult());
+        when(scanHistoryStore.save(any())).thenReturn(sampleHistoryEntry());
+
+        mockMvc.perform(post("/api/scan")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"repoPath\":\"D:\\\\workspace\\\\demo\",\"snapshotPath\":\"\"}"))
+            .andExpect(status().isOk());
+
+        verify(scanHistoryStore).save(sampleScanResult());
+    }
+
+    @Test
+    void historyListsAndLoadsPreviousScans() throws Exception {
+        when(scanHistoryStore.list()).thenReturn(List.of(sampleHistoryEntry()));
+        when(scanHistoryStore.load("scan-1")).thenReturn(Optional.of(sampleScanResult()));
+
+        mockMvc.perform(get("/api/history"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value("scan-1"))
+            .andExpect(jsonPath("$[0].repoName").value("demo"))
+            .andExpect(jsonPath("$[0].endpointCount").value(1));
+
+        mockMvc.perform(post("/api/history/{scanId}/load", "scan-1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.repoName").value("demo"))
+            .andExpect(jsonPath("$.endpointCount").value(1));
+
+        mockMvc.perform(get("/api/workbench"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.repository.repoName").value("demo"));
+    }
+
+    @Test
+    void aiConfigCanBeReadAndSavedWithoutReturningApiKey() throws Exception {
+        when(aiConfigService.status()).thenReturn(new AiConfigResponse(true, false, "deepseek", "https://api.deepseek.com", "deepseek-chat", "DEEPSEEK_API_KEY", ""));
+
+        mockMvc.perform(get("/api/ai-config"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.enabled").value(true))
+            .andExpect(jsonPath("$.provider").value("deepseek"))
+            .andExpect(jsonPath("$.apiKey").doesNotExist());
+
+        mockMvc.perform(post("/api/ai-config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "enabled": true,
+                      "provider": "local",
+                      "baseUrl": "http://127.0.0.1:11434",
+                      "model": "qwen",
+                      "apiKeyEnv": "LOCAL_AI_KEY"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        verify(aiConfigService).save(eq(new AiConfigUpdateRequest(true, "local", "http://127.0.0.1:11434", "qwen", "LOCAL_AI_KEY")));
     }
 
     @Test
@@ -162,6 +236,20 @@ class ScanControllerTest {
                 List.of("orders"),
                 "insert"
             ))
+        );
+    }
+
+    private ScanHistoryEntry sampleHistoryEntry() {
+        return new ScanHistoryEntry(
+            "scan-1",
+            Instant.parse("2026-06-22T09:00:00Z"),
+            "demo",
+            "D:\\workspace\\demo",
+            "main",
+            "abc123",
+            1,
+            2,
+            1
         );
     }
 

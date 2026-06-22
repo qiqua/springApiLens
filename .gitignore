@@ -1,5 +1,8 @@
 .worktrees/
 .spring-api-lens/ai-config.json
+.spring-api-lens/history/
+**/.spring-api-lens/ai-config.json
+**/.spring-api-lens/history/
 
 target/
 *.db

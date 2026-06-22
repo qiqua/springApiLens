@@ -18,16 +18,29 @@ const elements = {
   authorInput: document.getElementById('authorInput'),
   visibleCount: document.getElementById('visibleCount'),
   endpointList: document.getElementById('endpointList'),
-  detailContent: document.getElementById('detailContent')
+  detailContent: document.getElementById('detailContent'),
+  refreshHistoryButton: document.getElementById('refreshHistoryButton'),
+  historyList: document.getElementById('historyList'),
+  aiConfigStatus: document.getElementById('aiConfigStatus'),
+  aiEnabledInput: document.getElementById('aiEnabledInput'),
+  aiProviderInput: document.getElementById('aiProviderInput'),
+  aiBaseUrlInput: document.getElementById('aiBaseUrlInput'),
+  aiModelInput: document.getElementById('aiModelInput'),
+  aiApiKeyEnvInput: document.getElementById('aiApiKeyEnvInput'),
+  saveAiConfigButton: document.getElementById('saveAiConfigButton')
 };
 
 elements.scanButton.addEventListener('click', scanRepository);
+elements.refreshHistoryButton.addEventListener('click', loadHistory);
+elements.saveAiConfigButton.addEventListener('click', saveAiConfig);
 elements.searchInput.addEventListener('input', renderEndpointList);
 elements.methodFilter.addEventListener('change', renderEndpointList);
 elements.tableInput.addEventListener('input', renderEndpointList);
 elements.authorInput.addEventListener('input', renderEndpointList);
 
 loadWorkbench();
+loadHistory();
+loadAiConfig();
 
 async function loadWorkbench() {
   try {
@@ -71,10 +84,122 @@ async function scanRepository() {
     currentDetail = null;
     renderEmptyDetail('Select an endpoint to inspect evidence.');
     await loadWorkbench();
+    await loadHistory();
   } catch (error) {
     setStatus(error.message, true);
   } finally {
     elements.scanButton.disabled = false;
+  }
+}
+
+async function loadHistory() {
+  try {
+    const response = await fetch('/api/history');
+    const body = await response.json().catch(() => []);
+    if (!response.ok) {
+      throw new Error(body.message || 'History failed to load.');
+    }
+    renderHistory(body);
+  } catch (error) {
+    elements.historyList.className = 'history-list empty-state';
+    elements.historyList.textContent = error.message;
+  }
+}
+
+function renderHistory(history) {
+  elements.historyList.innerHTML = '';
+  if (!history.length) {
+    elements.historyList.className = 'history-list empty-state';
+    elements.historyList.textContent = 'No scan history yet.';
+    return;
+  }
+
+  elements.historyList.className = 'history-list';
+  for (const entry of history) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'history-row';
+    row.addEventListener('click', () => loadHistoryEntry(entry.id));
+    row.innerHTML = `
+      <strong>${escapeHtml(entry.repoName || '-')}</strong>
+      <span>${escapeHtml(entry.branchName || '-')} · ${escapeHtml(entry.headCommit || '-')}</span>
+      <span>${entry.endpointCount || 0} endpoints · ${formatDate(entry.scannedAt)}</span>
+    `;
+    elements.historyList.appendChild(row);
+  }
+}
+
+async function loadHistoryEntry(scanId) {
+  setStatus('Loading scan history...', false);
+  try {
+    const response = await fetch(`/api/history/${encodeURIComponent(scanId)}/load`, {
+      method: 'POST'
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.message || 'History entry failed to load.');
+    }
+    selectedKey = null;
+    currentDetail = null;
+    renderEmptyDetail('Select an endpoint to inspect evidence.');
+    await loadWorkbench();
+    setStatus(`Loaded history: ${body.endpointCount} endpoints.`, false);
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function loadAiConfig() {
+  try {
+    const response = await fetch('/api/ai-config');
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.message || 'AI config failed to load.');
+    }
+    renderAiConfig(body);
+  } catch (error) {
+    elements.aiConfigStatus.textContent = error.message;
+    elements.aiConfigStatus.classList.add('error-text');
+  }
+}
+
+function renderAiConfig(config) {
+  elements.aiEnabledInput.checked = Boolean(config.enabled);
+  elements.aiProviderInput.value = config.provider || '';
+  elements.aiBaseUrlInput.value = config.baseUrl || '';
+  elements.aiModelInput.value = config.model || '';
+  elements.aiApiKeyEnvInput.value = config.apiKeyEnv || '';
+  elements.aiConfigStatus.textContent = config.configured ? 'Configured' : (config.message || 'Not configured');
+  elements.aiConfigStatus.classList.toggle('error-text', !config.configured);
+}
+
+async function saveAiConfig() {
+  elements.saveAiConfigButton.disabled = true;
+  elements.aiConfigStatus.textContent = 'Saving...';
+  elements.aiConfigStatus.classList.remove('error-text');
+
+  try {
+    const response = await fetch('/api/ai-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: elements.aiEnabledInput.checked,
+        provider: elements.aiProviderInput.value.trim(),
+        baseUrl: elements.aiBaseUrlInput.value.trim(),
+        model: elements.aiModelInput.value.trim(),
+        apiKeyEnv: elements.aiApiKeyEnvInput.value.trim()
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.message || 'AI config failed to save.');
+    }
+    renderAiConfig(body);
+  } catch (error) {
+    elements.aiConfigStatus.textContent = error.message;
+    elements.aiConfigStatus.classList.add('error-text');
+  } finally {
+    elements.saveAiConfigButton.disabled = false;
   }
 }
 
@@ -234,7 +359,7 @@ function renderCallEdges(callEdges) {
   return `<div class="evidence-list">${callEdges.map((edge) => `
     <div class="evidence-item">
       <code>${escapeHtml(edge.fromSignature)} -> ${escapeHtml(edge.toSignature)}</code>
-      <span class="muted">confidence ${Number(edge.confidence || 0).toFixed(2)} 路 ${escapeHtml(edge.evidence || '-')}</span>
+      <span class="muted">confidence ${Number(edge.confidence || 0).toFixed(2)} · ${escapeHtml(edge.evidence || '-')}</span>
     </div>
   `).join('')}</div>`;
 }
@@ -245,7 +370,7 @@ function renderSqlFragments(sqlFragments) {
   }
   return `<div class="evidence-list">${sqlFragments.map((fragment) => `
     <div class="evidence-item">
-      <strong>${escapeHtml(fragment.operationType || '-')} 路 ${escapeHtml(fragment.mapperNamespace || '-')}.${escapeHtml(fragment.mapperMethod || '-')}</strong>
+      <strong>${escapeHtml(fragment.operationType || '-')} · ${escapeHtml(fragment.mapperNamespace || '-')}.${escapeHtml(fragment.mapperMethod || '-')}</strong>
       <span class="muted">${escapeHtml(fragment.relativeFile || '-')}</span>
       <pre class="code-block">${escapeHtml(fragment.sqlText || '')}</pre>
     </div>
@@ -261,7 +386,7 @@ function renderAuthors(authors) {
     <div class="evidence-item">
       <div class="author-row">
         <strong>${escapeHtml(author.name || '-')}</strong>
-        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% 路 ${author.lineCount || 0} lines</span>
+        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% · ${author.lineCount || 0} lines</span>
       </div>
       <div class="author-bar" aria-hidden="true"><span style="width: ${Math.max(0, Math.min(100, Number(author.ratio || 0) * 100))}%"></span></div>
       <span class="muted">${escapeHtml(author.email || '')}</span>
@@ -307,7 +432,7 @@ function renderAiSummary(summary) {
 
   content.className = 'ai-summary';
   content.innerHTML = `
-    <div class="ai-meta">${escapeHtml(summary.provider || 'AI')} 路 ${escapeHtml(summary.model || '-')}</div>
+    <div class="ai-meta">${escapeHtml(summary.provider || 'AI')} · ${escapeHtml(summary.model || '-')}</div>
     <pre class="summary-block">${escapeHtml(summary.content || '')}</pre>
   `;
 }
@@ -344,4 +469,15 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function formatDate(value) {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }

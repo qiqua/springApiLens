@@ -24,7 +24,7 @@ After the app starts, open:
 http://localhost:8080/
 ```
 
-The local workbench lets you scan one Git repository, browse endpoints, filter results, and inspect endpoint evidence.
+The local workbench lets you scan one Git repository, browse endpoints, filter results, inspect endpoint evidence, reload previous scans, and manage AI provider settings.
 
 Endpoint detail now includes author ownership from `git blame`. The AI Summary button can answer who wrote the endpoint, what the business logic does, how to call it, and which data/tables are involved.
 
@@ -56,6 +56,13 @@ Generate an optional AI summary for the selected endpoint:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/endpoints/<endpointKey>/ai-summary
+```
+
+List previous scans and load one into the workbench:
+
+```powershell
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/history
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/history/<scanId>/load
 ```
 
 ## AI Configuration
@@ -96,12 +103,13 @@ Config shape:
 }
 ```
 
-The client is OpenAI-compatible and posts to `{baseUrl}/v1/chat/completions`, so local Ollama/vLLM/OneAPI-style gateways and hosted providers can be switched by changing `provider`, `baseUrl`, `model`, and `apiKeyEnv`.
+The client is OpenAI-compatible and posts to `{baseUrl}/v1/chat/completions`, so local Ollama/vLLM/OneAPI-style gateways and hosted providers can be switched by changing `provider`, `baseUrl`, `model`, and `apiKeyEnv`. The workbench AI Settings panel writes the same local config file and never asks for or stores the raw API key.
 
 ## Current MVP Notes
 
 - Java source scanning currently uses lightweight JDK-based parsing so this repository builds in the available Maven environment.
 - Endpoint snapshot persistence currently writes a TSV file through `ScanResultRepository`.
+- Scan history currently writes JSON files under `.spring-api-lens/history/`.
 - AI calls are opt-in and use a local JSON config plus environment variables so provider/model/key are never hardcoded.
 - JavaParser and SQLite remain planned replacement points when those dependencies are available in the build environment.
 

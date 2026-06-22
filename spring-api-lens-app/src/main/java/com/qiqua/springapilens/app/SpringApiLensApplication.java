@@ -1,9 +1,9 @@
 package com.qiqua.springapilens.app;
 
 import com.qiqua.springapilens.app.ai.AiAnalysisService;
-import com.qiqua.springapilens.app.ai.AiConfig;
-import com.qiqua.springapilens.app.ai.AiConfigLoader;
 import com.qiqua.springapilens.app.ai.OpenAiCompatibleClient;
+import com.qiqua.springapilens.app.config.AiConfigService;
+import com.qiqua.springapilens.app.history.ScanHistoryStore;
 import com.qiqua.springapilens.core.scanner.RepositoryScanner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -24,16 +24,22 @@ public class SpringApiLensApplication {
     }
 
     @Bean
-    AiAnalysisService aiAnalysisService(RestClient.Builder restClientBuilder) {
+    AiAnalysisService aiAnalysisService(RestClient.Builder restClientBuilder, AiConfigService aiConfigService) {
         OpenAiCompatibleClient client = new OpenAiCompatibleClient(restClientBuilder);
-        return new AiAnalysisService(this::loadAiConfig, client);
+        return new AiAnalysisService(aiConfigService::load, client);
     }
 
-    private AiConfig loadAiConfig() {
+    @Bean
+    AiConfigService aiConfigService() {
         String configuredPath = System.getenv("SPRING_API_LENS_AI_CONFIG");
         Path path = configuredPath == null || configuredPath.isBlank()
             ? Path.of(".spring-api-lens", "ai-config.json")
             : Path.of(configuredPath);
-        return AiConfigLoader.load(path, System::getenv);
+        return new AiConfigService(path);
+    }
+
+    @Bean
+    ScanHistoryStore scanHistoryStore() {
+        return new ScanHistoryStore(Path.of(".spring-api-lens", "history"));
     }
 }

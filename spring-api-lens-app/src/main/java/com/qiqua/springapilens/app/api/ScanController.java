@@ -2,6 +2,9 @@ package com.qiqua.springapilens.app.api;
 
 import com.qiqua.springapilens.app.ai.AiAnalysisService;
 import com.qiqua.springapilens.app.ai.AiSummary;
+import com.qiqua.springapilens.app.config.AiConfigService;
+import com.qiqua.springapilens.app.history.ScanHistoryEntry;
+import com.qiqua.springapilens.app.history.ScanHistoryStore;
 import com.qiqua.springapilens.core.model.ApiEndpoint;
 import com.qiqua.springapilens.core.model.AuthorContribution;
 import com.qiqua.springapilens.core.model.CallEdge;
@@ -34,11 +37,21 @@ public class ScanController {
     private final RepositoryScanner repositoryScanner;
     private final LatestScanStore latestScanStore;
     private final AiAnalysisService aiAnalysisService;
+    private final ScanHistoryStore scanHistoryStore;
+    private final AiConfigService aiConfigService;
 
-    public ScanController(RepositoryScanner repositoryScanner, LatestScanStore latestScanStore, AiAnalysisService aiAnalysisService) {
+    public ScanController(
+        RepositoryScanner repositoryScanner,
+        LatestScanStore latestScanStore,
+        AiAnalysisService aiAnalysisService,
+        ScanHistoryStore scanHistoryStore,
+        AiConfigService aiConfigService
+    ) {
         this.repositoryScanner = repositoryScanner;
         this.latestScanStore = latestScanStore;
         this.aiAnalysisService = aiAnalysisService;
+        this.scanHistoryStore = scanHistoryStore;
+        this.aiConfigService = aiConfigService;
     }
 
     @PostMapping("/scan")
@@ -48,6 +61,7 @@ public class ScanController {
             new ScanResultRepository(Path.of(request.snapshotPath())).save(result);
         }
         latestScanStore.save(result);
+        scanHistoryStore.save(result);
         return new ScanResponse(
             result.repositoryInfo().repoName(),
             result.endpoints().size(),
@@ -92,6 +106,37 @@ public class ScanController {
             .findFirst()
             .<ResponseEntity<?>>map(endpoint -> ResponseEntity.ok(toEndpointDetailResponse(result, endpoint)))
             .orElseGet(this::endpointNotFound);
+    }
+
+    @GetMapping("/history")
+    public List<ScanHistoryEntry> history() {
+        return scanHistoryStore.list();
+    }
+
+    @PostMapping("/history/{scanId}/load")
+    public ResponseEntity<?> loadHistory(@PathVariable("scanId") String scanId) {
+        return scanHistoryStore.load(scanId)
+            .<ResponseEntity<?>>map(result -> {
+                latestScanStore.save(result);
+                return ResponseEntity.ok(new ScanResponse(
+                    result.repositoryInfo().repoName(),
+                    result.endpoints().size(),
+                    result.callEdges().size(),
+                    result.sqlFragments().size()
+                ));
+            })
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiErrorResponse("Scan history entry was not found.")));
+    }
+
+    @GetMapping("/ai-config")
+    public AiConfigResponse aiConfig() {
+        return aiConfigService.status();
+    }
+
+    @PostMapping("/ai-config")
+    public AiConfigResponse saveAiConfig(@RequestBody AiConfigUpdateRequest request) {
+        return aiConfigService.save(request);
     }
 
     @PostMapping("/endpoints/{endpointKey}/ai-summary")
