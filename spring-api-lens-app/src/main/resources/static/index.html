@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>springApiLens</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="scan-bar" aria-label="Repository scan">
+      <div class="brand">
+        <strong>springApiLens</strong>
+        <span>Local API workbench</span>
+      </div>
+      <label class="field repo-field" for="repoPathInput">
+        <span>Repo path</span>
+        <input id="repoPathInput" type="text" placeholder="D:\workspace\demo-springboot">
+      </label>
+      <label class="field snapshot-field" for="snapshotPathInput">
+        <span>Snapshot path</span>
+        <input id="snapshotPathInput" type="text" placeholder="Optional TSV path">
+      </label>
+      <button id="scanButton" class="primary-button" type="button">Scan</button>
+      <p id="scanStatus" class="status-text">No repository scanned.</p>
+    </section>
+
+    <section class="summary-strip" aria-label="Scan summary">
+      <div><span>Repository</span><strong id="repoName">-</strong></div>
+      <div><span>Endpoints</span><strong id="endpointCount">0</strong></div>
+      <div><span>Call edges</span><strong id="callEdgeCount">0</strong></div>
+      <div><span>SQL fragments</span><strong id="sqlFragmentCount">0</strong></div>
+      <div><span>Tables</span><strong id="tableCount">0</strong></div>
+    </section>
+
+    <section class="workspace">
+      <aside class="filters-panel" aria-label="Endpoint filters">
+        <h2>Filters</h2>
+        <label class="field" for="searchInput">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="path, class, method, type">
+        </label>
+        <label class="field" for="methodFilter">
+          <span>HTTP method</span>
+          <select id="methodFilter">
+            <option value="">All</option>
+          </select>
+        </label>
+        <label class="field" for="tableInput">
+          <span>Table</span>
+          <input id="tableInput" type="search" placeholder="table name">
+        </label>
+        <label class="field" for="authorInput">
+          <span>Author</span>
+          <input id="authorInput" type="search" placeholder="author keyword">
+        </label>
+      </aside>
+
+      <section class="endpoint-panel" aria-label="Endpoint list">
+        <div class="panel-header">
+          <h2>Endpoints</h2>
+          <span id="visibleCount">0 shown</span>
+        </div>
+        <div id="endpointList" class="endpoint-list" role="list"></div>
+      </section>
+
+      <section class="detail-panel" aria-label="Endpoint detail">
+        <div class="panel-header">
+          <h2>Endpoint Detail</h2>
+        </div>
+        <div id="detailContent" class="detail-content empty-state">Select an endpoint to inspect evidence.</div>
+      </section>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
