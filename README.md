@@ -17,3 +17,15 @@ See the initial design document:
 
 - [Interface Overview Tool Design](docs/superpowers/specs/2026-06-22-interface-overview-tool-design.md)
 
+## Development
+
+```powershell
+mvn test
+```
+
+Run the local API:
+
+```powershell
+mvn -pl spring-api-lens-app spring-boot:run
+```
+

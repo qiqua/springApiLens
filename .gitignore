@@ -1,2 +1,14 @@
 .worktrees/
 
+target/
+*.db
+*.sqlite
+*.sqlite3
+
+.idea/
+.vscode/
+*.iml
+
+node_modules/
+dist/
+
