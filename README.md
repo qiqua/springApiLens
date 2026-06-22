@@ -2,30 +2,40 @@
 
 `springApiLens` is a local interface overview tool for Java/Spring Boot projects.
 
-The planned product scans one local Git repository, builds a Spring-specific code knowledge graph, and provides a Web UI for browsing APIs by Git author, call chain, business logic, related SQL, and database tables.
+The first MVP scans one local Git repository, extracts Spring endpoints, deterministic Java call edges, MyBatis SQL fragments, and basic Git ownership evidence.
 
-## First Goal
-
-- Scan a local Spring Boot Git repository.
-- Detect Controller endpoints.
-- Build Controller -> Service -> Mapper call chains.
-- Parse MyBatis SQL and related tables.
-- Attribute endpoint-related code to Git authors.
-- Use AI to summarize endpoint behavior from scanner evidence.
-
-See the initial design document:
-
-- [Interface Overview Tool Design](docs/superpowers/specs/2026-06-22-interface-overview-tool-design.md)
-
-## Development
+## Build
 
 ```powershell
 mvn test
 ```
 
-Run the local API:
+## Run
 
 ```powershell
 mvn -pl spring-api-lens-app spring-boot:run
 ```
+
+## Scan A Repository
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/scan -ContentType 'application/json' -Body '{"repoPath":"D:\\workspace\\demo-springboot","snapshotPath":"D:\\workspace\\spring-api-lens.tsv"}'
+```
+
+## List Endpoints
+
+```powershell
+Invoke-RestMethod -Method Get -Uri http://localhost:8080/api/endpoints
+```
+
+## Current MVP Notes
+
+- Java source scanning currently uses lightweight JDK-based parsing so this repository builds in the available Maven environment.
+- Endpoint snapshot persistence currently writes a TSV file through `ScanResultRepository`.
+- JavaParser and SQLite remain planned replacement points when those dependencies are available in the build environment.
+
+## Design
+
+- [Interface Overview Tool Design](docs/superpowers/specs/2026-06-22-interface-overview-tool-design.md)
+- [Phase One MVP Plan](docs/superpowers/plans/2026-06-22-phase-one-mvp.md)
 
