@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 public class AiConfigService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -33,6 +34,7 @@ public class AiConfigService {
             config.baseUrl(),
             config.model(),
             config.apiKeyEnv(),
+            !config.apiKey().isBlank(),
             config.configured() ? "" : missingConfigMessage(config)
         );
     }
@@ -42,17 +44,46 @@ public class AiConfigService {
             if (configPath.getParent() != null) {
                 Files.createDirectories(configPath.getParent());
             }
+            PersistedAiConfig existing = readExistingConfig();
+            SecretConfig secretConfig = secretConfig(request, existing);
             OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configPath.toFile(), new PersistedAiConfig(
                 request.enabled(),
                 trim(request.provider()),
                 trim(request.baseUrl()),
                 trim(request.model()),
-                trim(request.apiKeyEnv())
+                secretConfig.apiKeyEnv(),
+                secretConfig.apiKey()
             ));
             return status();
         } catch (IOException exception) {
             throw new UncheckedIOException("Failed to save AI config to " + configPath, exception);
         }
+    }
+
+    private PersistedAiConfig readExistingConfig() throws IOException {
+        if (!Files.exists(configPath)) {
+            return new PersistedAiConfig(false, "", "", "", "", "");
+        }
+        return OBJECT_MAPPER.readValue(configPath.toFile(), PersistedAiConfig.class);
+    }
+
+    private SecretConfig secretConfig(AiConfigUpdateRequest request, PersistedAiConfig existing) {
+        String submittedSecret = trim(request.apiKey());
+        if (submittedSecret.isBlank()) {
+            submittedSecret = trim(request.apiKeyEnv());
+        }
+        if (submittedSecret.isBlank()) {
+            return new SecretConfig(trim(existing.apiKeyEnv()), trim(existing.apiKey()));
+        }
+        if (looksLikeEnvironmentVariableName(submittedSecret)) {
+            return new SecretConfig(submittedSecret, "");
+        }
+        return new SecretConfig("", submittedSecret);
+    }
+
+    private boolean looksLikeEnvironmentVariableName(String value) {
+        return value.matches("[A-Z_][A-Z0-9_]*")
+            && value.equals(value.toUpperCase(Locale.ROOT));
     }
 
     private String missingConfigMessage(AiConfig config) {
@@ -71,7 +102,14 @@ public class AiConfigService {
         String provider,
         String baseUrl,
         String model,
-        String apiKeyEnv
+        String apiKeyEnv,
+        String apiKey
+    ) {
+    }
+
+    private record SecretConfig(
+        String apiKeyEnv,
+        String apiKey
     ) {
     }
 }

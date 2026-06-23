@@ -99,11 +99,11 @@ Config shape:
   "provider": "deepseek",
   "baseUrl": "https://api.deepseek.com",
   "model": "deepseek-chat",
-  "apiKeyEnv": "SPRING_API_LENS_AI_KEY"
+  "apiKey": "sk-your-key"
 }
 ```
 
-The client is OpenAI-compatible and posts to `{baseUrl}/v1/chat/completions`, so local Ollama/vLLM/OneAPI-style gateways and hosted providers can be switched by changing `provider`, `baseUrl`, `model`, and `apiKeyEnv`. The workbench AI Settings panel writes the same local config file and never asks for or stores the raw API key.
+The client is OpenAI-compatible and posts to `{baseUrl}/v1/chat/completions`, so local Ollama/vLLM/OneAPI-style gateways and hosted providers can be switched by changing `provider`, `baseUrl`, `model`, and either `apiKey` or `apiKeyEnv`. The workbench AI Settings panel writes the same local config file; paste a direct API key for local-only use, or enter an uppercase environment variable name such as `SPRING_API_LENS_AI_KEY` to resolve the key from the shell.
 
 ## Current MVP Notes
 

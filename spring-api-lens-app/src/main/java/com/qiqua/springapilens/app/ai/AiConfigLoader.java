@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.function.Function;
 
 public final class AiConfigLoader {
@@ -21,13 +22,15 @@ public final class AiConfigLoader {
         try {
             RawConfig raw = OBJECT_MAPPER.readValue(configPath.toFile(), RawConfig.class);
             String apiKeyEnv = trim(raw.apiKeyEnv);
+            String directApiKey = trim(raw.apiKey);
+            ResolvedSecret secret = resolveSecret(directApiKey, apiKeyEnv, envReader);
             return new AiConfig(
                 raw.enabled,
                 trim(raw.provider),
                 trim(raw.baseUrl),
                 trim(raw.model),
-                apiKeyEnv,
-                apiKeyEnv.isBlank() ? "" : trim(envReader.apply(apiKeyEnv))
+                secret.apiKeyEnv(),
+                secret.apiKey()
             );
         } catch (IOException exception) {
             throw new UncheckedIOException("Failed to load AI config from " + configPath, exception);
@@ -38,11 +41,37 @@ public final class AiConfigLoader {
         return value == null ? "" : value.trim();
     }
 
+    private static ResolvedSecret resolveSecret(
+        String directApiKey,
+        String apiKeyEnv,
+        Function<String, String> envReader
+    ) {
+        if (!directApiKey.isBlank()) {
+            return new ResolvedSecret("", directApiKey);
+        }
+        if (apiKeyEnv.isBlank()) {
+            return new ResolvedSecret("", "");
+        }
+        if (looksLikeEnvironmentVariableName(apiKeyEnv)) {
+            return new ResolvedSecret(apiKeyEnv, trim(envReader.apply(apiKeyEnv)));
+        }
+        return new ResolvedSecret("", apiKeyEnv);
+    }
+
+    private static boolean looksLikeEnvironmentVariableName(String value) {
+        return value.matches("[A-Z_][A-Z0-9_]*")
+            && value.equals(value.toUpperCase(Locale.ROOT));
+    }
+
     private static final class RawConfig {
         public boolean enabled;
         public String provider;
         public String baseUrl;
         public String model;
         public String apiKeyEnv;
+        public String apiKey;
+    }
+
+    private record ResolvedSecret(String apiKeyEnv, String apiKey) {
     }
 }

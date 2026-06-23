@@ -134,7 +134,7 @@ class ScanControllerTest {
 
     @Test
     void aiConfigCanBeReadAndSavedWithoutReturningApiKey() throws Exception {
-        when(aiConfigService.status()).thenReturn(new AiConfigResponse(true, false, "deepseek", "https://api.deepseek.com", "deepseek-chat", "DEEPSEEK_API_KEY", ""));
+        when(aiConfigService.status()).thenReturn(new AiConfigResponse(true, false, "deepseek", "https://api.deepseek.com", "deepseek-chat", "DEEPSEEK_API_KEY", false, ""));
 
         mockMvc.perform(get("/api/ai-config"))
             .andExpect(status().isOk())
@@ -155,7 +155,7 @@ class ScanControllerTest {
                     """))
             .andExpect(status().isOk());
 
-        verify(aiConfigService).save(eq(new AiConfigUpdateRequest(true, "local", "http://127.0.0.1:11434", "qwen", "LOCAL_AI_KEY")));
+        verify(aiConfigService).save(eq(new AiConfigUpdateRequest(true, "local", "http://127.0.0.1:11434", "qwen", "LOCAL_AI_KEY", null)));
     }
 
     @Test

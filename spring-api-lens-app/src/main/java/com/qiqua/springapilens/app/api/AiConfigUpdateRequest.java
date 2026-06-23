@@ -5,6 +5,7 @@ public record AiConfigUpdateRequest(
     String provider,
     String baseUrl,
     String model,
-    String apiKeyEnv
+    String apiKeyEnv,
+    String apiKey
 ) {
 }

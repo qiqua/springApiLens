@@ -7,6 +7,7 @@ public record AiConfigResponse(
     String baseUrl,
     String model,
     String apiKeyEnv,
+    boolean apiKeyConfigured,
     String message
 ) {
 }

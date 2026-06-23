@@ -169,6 +169,9 @@ function renderAiConfig(config) {
   elements.aiBaseUrlInput.value = config.baseUrl || '';
   elements.aiModelInput.value = config.model || '';
   elements.aiApiKeyEnvInput.value = config.apiKeyEnv || '';
+  elements.aiApiKeyEnvInput.placeholder = config.apiKeyConfigured && !config.apiKeyEnv
+    ? '已保存 API Key；重新输入可替换'
+    : 'sk-... 或 SPRING_API_LENS_AI_KEY';
   elements.aiConfigStatus.textContent = config.configured ? '已配置' : translateAiMessage(config.message || '未配置');
   elements.aiConfigStatus.classList.toggle('error-text', !config.configured);
 }
@@ -187,6 +190,7 @@ async function saveAiConfig() {
         provider: elements.aiProviderInput.value.trim(),
         baseUrl: elements.aiBaseUrlInput.value.trim(),
         model: elements.aiModelInput.value.trim(),
+        apiKey: elements.aiApiKeyEnvInput.value.trim(),
         apiKeyEnv: elements.aiApiKeyEnvInput.value.trim()
       })
     });
@@ -525,7 +529,7 @@ function formatDate(value) {
 function translateAiMessage(message) {
   const dictionary = {
     'AI is disabled.': 'AI 已禁用。',
-    'AI is enabled but baseUrl, model, or API key is missing.': 'AI 已启用，但 Base URL、模型或密钥环境变量缺失。',
+    'AI is enabled but baseUrl, model, or API key is missing.': 'AI 已启用，但 Base URL、模型或 API Key/环境变量缺失。',
     'AI is disabled. Configure .spring-api-lens/ai-config.json to enable summaries.': 'AI 已禁用，请在 AI 配置中启用后再生成摘要。'
   };
   return dictionary[message] || message;
