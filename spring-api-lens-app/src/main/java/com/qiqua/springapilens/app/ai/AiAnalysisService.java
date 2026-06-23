@@ -102,7 +102,7 @@ public class AiAnalysisService {
             return "-";
         }
         return authors.stream()
-            .map(author -> "- %s <%s>, %.2f, %d lines".formatted(
+            .map(author -> "- %s <%s>, %.2f, %d evidence items".formatted(
                 author.name(),
                 author.email(),
                 author.ratio(),

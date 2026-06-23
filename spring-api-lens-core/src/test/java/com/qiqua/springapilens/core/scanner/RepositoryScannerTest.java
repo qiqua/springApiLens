@@ -1,5 +1,6 @@
 package com.qiqua.springapilens.core.scanner;
 
+import com.qiqua.springapilens.core.model.ApiEndpoint;
 import com.qiqua.springapilens.core.model.ScanResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,10 +65,132 @@ class RepositoryScannerTest {
         assertThat(result.sqlFragments()).hasSize(1);
     }
 
+    @Test
+    void includesDownstreamMethodAuthorsInEndpointAuthorContributions() throws Exception {
+        initGit();
+        write("src/main/java/com/example/OrderController.java", """
+            package com.example;
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+            @RestController
+            @RequestMapping("/api/order")
+            class OrderController {
+                private final OrderService orderService;
+                OrderController(OrderService orderService) { this.orderService = orderService; }
+                @GetMapping("/detail")
+                String detail() { return orderService.detail(); }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "controller");
+
+        configureGit("Li Ming", "liming@example.com");
+        write("src/main/java/com/example/OrderService.java", """
+            package com.example;
+            class OrderService {
+                String detail() { return "ok"; }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "service");
+
+        ScanResult result = new RepositoryScanner().scan(repoRoot);
+
+        assertThat(result.endpoints()).hasSize(1);
+        assertThat(result.endpoints().getFirst().authors())
+            .extracting("name")
+            .contains("Zhang San", "Li Ming");
+    }
+
+    @Test
+    void includesAuthorsWhoTouchedEndpointFileHistory() throws Exception {
+        initGit();
+        configureGit("Li Ming", "liming@example.com");
+        write("src/main/java/com/example/OrderController.java", """
+            package com.example;
+            class OrderController {
+                String seed() { return "seed"; }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "seed controller file");
+
+        configureGit("Zhang San", "zhang@example.com");
+        write("src/main/java/com/example/OrderController.java", """
+            package com.example;
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+            @RestController
+            @RequestMapping("/api/order")
+            class OrderController {
+                @GetMapping("/detail")
+                String detail() { return "ok"; }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "add endpoint");
+
+        ScanResult result = new RepositoryScanner().scan(repoRoot);
+
+        assertThat(result.endpoints()).hasSize(1);
+        assertThat(result.endpoints().getFirst().authors())
+            .extracting("name")
+            .contains("Zhang San", "Li Ming");
+    }
+
+    @Test
+    void doesNotMixDownstreamAuthorsFromMethodsWithSharedPrefix() throws Exception {
+        initGit();
+        write("src/main/java/com/example/OrderController.java", """
+            package com.example;
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+            @RestController
+            @RequestMapping("/api/order")
+            class OrderController {
+                private final OrderTypeService orderTypeService;
+                OrderController(OrderTypeService orderTypeService) { this.orderTypeService = orderTypeService; }
+                @GetMapping("/detail")
+                String detail() { return "ok"; }
+                @GetMapping("/detail/type")
+                String detailType() { return orderTypeService.detailType(); }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "controller");
+
+        configureGit("Li Ming", "liming@example.com");
+        write("src/main/java/com/example/OrderTypeService.java", """
+            package com.example;
+            class OrderTypeService {
+                String detailType() { return "type"; }
+            }
+            """);
+        run("git", "add", ".");
+        run("git", "commit", "-m", "type service");
+
+        ScanResult result = new RepositoryScanner().scan(repoRoot);
+
+        ApiEndpoint detail = result.endpoints().stream()
+            .filter(endpoint -> endpoint.methodName().equals("detail"))
+            .findFirst()
+            .orElseThrow();
+        assertThat(detail.authors())
+            .extracting("name")
+            .doesNotContain("Li Ming");
+    }
+
     private void initGit() throws Exception {
         run("git", "init");
-        run("git", "config", "user.name", "Zhang San");
-        run("git", "config", "user.email", "zhang@example.com");
+        configureGit("Zhang San", "zhang@example.com");
+    }
+
+    private void configureGit(String name, String email) throws Exception {
+        run("git", "config", "user.name", name);
+        run("git", "config", "user.email", email);
     }
 
     private void write(String relativePath, String content) throws Exception {

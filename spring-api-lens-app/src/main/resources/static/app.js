@@ -343,7 +343,7 @@ function renderDetail(detail) {
       ${renderSqlFragments(detail.sqlFragments || [])}
     </section>
     <section class="detail-section">
-      <h3>提交人归属</h3>
+      <h3>入口、调用链及文件历史提交人</h3>
       ${renderAuthors(detail.authors || [])}
     </section>
     <section class="detail-section">
@@ -372,7 +372,7 @@ function renderBusinessProfile(profile) {
     <div class="profile-grid">
       ${renderProfileBlock('业务流程', profile.businessFlow)}
       ${renderProfileBlock('涉及数据表', profile.dataTables)}
-      ${renderProfileBlock('作者归属', profile.authorSummary)}
+      ${renderProfileBlock('入口、调用链及文件历史作者', profile.authorSummary)}
       ${renderProfileBlock('风险点', profile.risks)}
       ${renderProfileBlock('测试建议', profile.testSuggestions)}
     </div>
@@ -420,13 +420,13 @@ function renderSqlFragments(sqlFragments) {
 
 function renderAuthors(authors) {
   if (!authors.length) {
-    return '<p class="muted">暂未识别到该接口的 Git blame 作者证据。</p>';
+    return '<p class="muted">暂未识别到该接口入口、调用链及相关文件历史的 Git 作者证据。</p>';
   }
   return `<div class="evidence-list">${authors.map((author) => `
     <div class="evidence-item">
       <div class="author-row">
         <strong>${escapeHtml(author.name || '-')}</strong>
-        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% · ${author.lineCount || 0} 行</span>
+        <span class="muted">${Math.round(Number(author.ratio || 0) * 100)}% · ${author.lineCount || 0} 条证据</span>
       </div>
       <div class="author-bar" aria-hidden="true"><span style="width: ${Math.max(0, Math.min(100, Number(author.ratio || 0) * 100))}%"></span></div>
       <span class="muted">${escapeHtml(author.email || '')}</span>

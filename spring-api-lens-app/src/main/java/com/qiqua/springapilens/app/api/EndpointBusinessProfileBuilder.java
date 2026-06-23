@@ -74,10 +74,10 @@ class EndpointBusinessProfileBuilder {
 
     private List<String> authorSummary(List<AuthorContribution> authors) {
         if (authors.isEmpty()) {
-            return List.of("暂未识别到 Git blame 作者归属。");
+            return List.of("暂未识别到入口、调用链及相关文件历史的 Git 作者证据。");
         }
         return authors.stream()
-            .map(author -> "%s 贡献 %d 行，约 %d%%。".formatted(
+            .map(author -> "%s 在入口、调用链及相关文件历史贡献 %d 条证据，约 %d%%。".formatted(
                 blankAsDash(author.name()),
                 author.lineCount(),
                 Math.round(author.ratio() * 100)

@@ -293,7 +293,7 @@ public class ScanController {
     }
 
     private boolean matchesAny(String signature, Set<String> methodNames) {
-        return methodNames.stream().anyMatch(signature::contains);
+        return methodNames.contains(normalizedSignature(signature));
     }
 
     private String normalizedSignature(String signature) {

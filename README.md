@@ -26,7 +26,7 @@ http://localhost:8080/
 
 The local workbench uses Chinese UI text and lets you scan one Git repository, browse endpoints, filter results, inspect endpoint business profiles, reload previous scans, and manage AI provider settings.
 
-Endpoint detail includes a structured business profile: purpose, call guide, business flow, related tables, author ownership from `git blame`, risks, and test suggestions. The AI Summary button uses the same evidence to answer who wrote the endpoint, what the business logic does, how to call it, and which data/tables are involved.
+Endpoint detail includes a structured business profile: purpose, call guide, business flow, related tables, Git author evidence from endpoint/call-chain blame plus related file history, risks, and test suggestions. The AI Summary button uses the same evidence to answer who wrote the endpoint, what the business logic does, how to call it, and which data/tables are involved.
 
 ## Scan A Repository
 
